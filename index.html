@@ -473,7 +473,7 @@
                   <div class="field"><label for="secondOpMinutes">Minutes / second operation</label><input id="secondOpMinutes" type="number" min="0" step="any"></div>
                 </div>
                 <div class="settings-actions"><button id="resetConfig" class="button" type="button">Restore example data</button></div>
-                <p class="footer-note">Material is prorated by stock length used (finished part length plus length allowance) × quantity. Shop rate × estimated labor hours and enabled Rush and PITA surcharges are added separately; both surcharges are calculated from the material and labor subtotal. Scrap/reuse, finishing, tax, and special tooling are not included.</p>
+                <p class="footer-note">Material is prorated by stock length used (finished part length plus length allowance) × quantity. PITA is applied to labor only; Rush is applied to the material and labor subtotal. Scrap/reuse, finishing, tax, and special tooling are not included.</p>
               </div>
             </details>
           </div>
@@ -510,9 +510,8 @@
       <table class="print-table print-costs">
         <tbody>
           <tr><th scope="row">Stock material</th><td id="printMaterialCost"></td></tr>
-          <tr><th scope="row">Machining labor</th><td id="printLaborCost"></td></tr>
+          <tr><th scope="row" id="printLaborLabel">Machining labor</th><td id="printLaborCost"></td></tr>
           <tr><th scope="row" id="printRushLabel"></th><td id="printRushCost"></td></tr>
-          <tr><th scope="row" id="printPitaLabel"></th><td id="printPitaCost"></td></tr>
           <tr class="print-total"><th scope="row">Estimated total</th><td id="printTotal"></td></tr>
         </tbody>
       </table>
@@ -620,6 +619,19 @@
       return stockLength > 0 ? numberOrZero(stock.price) * requiredStockLength() / stockLength : 0;
     }
 
+    function estimateLabor(quantity) {
+      const featureMinutes =
+        (quote.holesEnabled ? numberOrZero(quote.holesCount) * numberOrZero(config.rates.holeMinutes) : 0) +
+        (quote.threadsEnabled ? numberOrZero(quote.threadsCount) * numberOrZero(config.rates.threadMinutes) : 0) +
+        (quote.hexEnabled ? numberOrZero(quote.hexCount) * numberOrZero(config.rates.hexMinutes) : 0) +
+        (quote.externalThreadsEnabled ? numberOrZero(quote.externalThreadsCount) * numberOrZero(config.rates.externalThreadMinutes) : 0) +
+        (quote.secondOpsEnabled ? numberOrZero(quote.secondOpsCount) * numberOrZero(config.rates.secondOpMinutes) : 0);
+      const cycle = numberOrZero(config.rates.cycleMinutes) + featureMinutes;
+      const totalMinutes = numberOrZero(config.rates.setupMinutes) + cycle * quantity;
+      const cost = totalMinutes * numberOrZero(config.rates.hourlyRate) / 60;
+      return { cycle, totalMinutes, cost };
+    }
+
     function findFittingStock() {
       const material = document.getElementById("material").value;
       const dims = [
@@ -693,23 +705,16 @@
         .every(id => numberOrZero(document.getElementById(id).value) > 0);
       const quoteReady = Boolean(stock && hasPartDimensions);
       const quantity = Math.max(1, Math.floor(numberOrZero(quote.quantity) || 1));
-      const featureMinutes =
-        (quote.holesEnabled ? numberOrZero(quote.holesCount) * numberOrZero(config.rates.holeMinutes) : 0) +
-        (quote.threadsEnabled ? numberOrZero(quote.threadsCount) * numberOrZero(config.rates.threadMinutes) : 0) +
-        (quote.hexEnabled ? numberOrZero(quote.hexCount) * numberOrZero(config.rates.hexMinutes) : 0) +
-        (quote.externalThreadsEnabled ? numberOrZero(quote.externalThreadsCount) * numberOrZero(config.rates.externalThreadMinutes) : 0) +
-        (quote.secondOpsEnabled ? numberOrZero(quote.secondOpsCount) * numberOrZero(config.rates.secondOpMinutes) : 0);
-      const cycle = numberOrZero(config.rates.cycleMinutes) + featureMinutes;
-      const totalMinutes = numberOrZero(config.rates.setupMinutes) + cycle * quantity;
+      const laborEstimate = estimateLabor(quantity);
       const materialCost = quoteReady ? stockMaterialCostPerPart(stock) * quantity : 0;
-      const laborCost = quoteReady ? totalMinutes * numberOrZero(config.rates.hourlyRate) / 60 : 0;
+      const laborCost = quoteReady ? laborEstimate.cost : 0;
       const pitaFactor = Math.min(PITA_MAX, Math.round(numberOrZero(quote.pitaFactor)));
       quote.pitaFactor = pitaFactor;
       const pitaRate = pitaFactor * PITA_RATE_PER_LEVEL;
       const pitaPercent = Math.round(pitaRate * 100);
       const rushPercent = numberOrZero(config.rates.rushPercent);
       const subtotal = materialCost + laborCost;
-      const pitaCost = quoteReady ? subtotal * pitaRate : 0;
+      const pitaCost = quoteReady ? laborCost * pitaRate : 0;
       const rushCost = quoteReady && quote.rushEnabled ? subtotal * rushPercent / 100 : 0;
       const total = subtotal + pitaCost + rushCost;
       document.getElementById("pitaFactor").value = pitaFactor;
@@ -721,7 +726,7 @@
       document.getElementById("laborCost").textContent = money(laborCost);
       document.getElementById("rushCost").textContent = money(rushCost);
       document.getElementById("pitaCost").textContent = money(pitaCost);
-      document.getElementById("laborMinutes").textContent = `${totalMinutes.toFixed(0)} min`;
+      document.getElementById("laborMinutes").textContent = `${laborEstimate.totalMinutes.toFixed(0)} min`;
       document.getElementById("quoteQuantity").textContent = `${quantity} ${quantity === 1 ? "pc" : "pcs"}`;
       document.getElementById("totalCost").textContent = quoteReady ? money(total) : "—";
       document.getElementById("unitPrice").textContent = quoteReady
@@ -734,7 +739,7 @@
       if (quote.externalThreadsEnabled) selectedFeatures.push(`${numberOrZero(quote.externalThreadsCount)} external threads`);
       if (quote.secondOpsEnabled) selectedFeatures.push(`${numberOrZero(quote.secondOpsCount)} second operations`);
       document.getElementById("featureSummary").textContent = selectedFeatures.join(", ") || "No features selected";
-      document.getElementById("laborDetail").textContent = `Setup + ${cycle.toFixed(0)} min / part`;
+      document.getElementById("laborDetail").textContent = `Setup + ${laborEstimate.cycle.toFixed(0)} min / part`;
       persistQuote();
     }
 
@@ -965,7 +970,7 @@
         `Stock: ${stock ? `${formatStock(stock)}; ${requiredStockLength().toFixed(2)} ${quote.unit} used, ${money(stockMaterialCostPerPart(stock))} material per part (${money(numberOrZero(stock.price))} per ${stock.length} ${stock.unit || "in"})` : "No matching stock selected"}`,
         `Rush: ${quote.rushEnabled ? `Yes (+${numberOrZero(config.rates.rushPercent)}%)` : "No"}`,
         `Features: ${features.join(", ") || "None specified"}`,
-        `PITA factor: ${pitaFactor}/${PITA_MAX} (+${pitaPercent}%)`,
+        `PITA factor: ${pitaFactor}/${PITA_MAX} (+${pitaPercent}% on labor only)`,
         `Notes: ${quote.notes || "None"}`,
         `Estimated total: ${document.getElementById("totalCost").textContent} (${document.getElementById("unitPrice").textContent})`,
         "Estimate only; verify material, tolerances, finish, and shop pricing before quoting."
@@ -978,6 +983,11 @@
       const quantity = Math.max(1, Math.floor(numberOrZero(quote.quantity) || 1));
       const pitaFactor = Math.min(PITA_MAX, Math.max(0, numberOrZero(quote.pitaFactor)));
       const pitaPercent = Math.round(pitaFactor * PITA_RATE_PER_LEVEL * 100);
+      const quoteReady = Boolean(stock && ["length", "width", "thickness"]
+        .every(id => numberOrZero(document.getElementById(id).value) > 0));
+      const laborEstimate = estimateLabor(quantity);
+      const laborCost = quoteReady ? laborEstimate.cost : 0;
+      const laborPita = laborCost * pitaFactor * PITA_RATE_PER_LEVEL;
       const features = [];
       if (quote.holesEnabled) features.push(`${numberOrZero(quote.holesCount)} drilled holes`);
       if (quote.threadsEnabled) features.push(`${numberOrZero(quote.threadsCount)} threaded holes`);
@@ -998,10 +1008,9 @@
         printFeatures: features.join(", ") || "None specified",
         printNotes: quote.notes || "None",
         printMaterialCost: document.getElementById("materialCost").textContent,
-        printLaborCost: document.getElementById("laborCost").textContent,
+        printLaborLabel: pitaPercent ? `Machining labor (includes ${pitaPercent}% PITA)` : "Machining labor",
+        printLaborCost: money(laborCost + laborPita),
         printRushCost: document.getElementById("rushCost").textContent,
-        printPitaLabel: `PITA adjustment (${pitaPercent}%)`,
-        printPitaCost: document.getElementById("pitaCost").textContent,
         printTotal: document.getElementById("totalCost").textContent,
         printUnitPrice: document.getElementById("unitPrice").textContent
       };
