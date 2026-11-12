@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Billet Billy | Shop Quote</title>
+  <link rel="icon" type="image/png" href="https://pinnermachineshop.ca/cdn/shop/files/Favicon.png?crop=center&amp;height=32&amp;v=1613687843&amp;width=32">
+  <link rel="icon" type="image/jxl" href="pinnerFavicon.jxl">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
@@ -80,7 +82,7 @@
     }
     .layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(310px, .8fr); gap: 18px; align-items: start; }
     .form-column { display: grid; gap: 14px; }
-    .quote-column { display: grid; align-content: start; gap: 14px; min-width: 0; }
+    .quote-column { display: grid; align-content: start; align-self: stretch; gap: 14px; min-width: 0; }
     .quote-column .demo-note { max-width: none; }
     .card {
       padding: 20px;
@@ -426,7 +428,7 @@
       <div class="quote-column">
         <aside class="card quote-card" aria-labelledby="quote-heading">
           <div class="quote-header">
-            <div class="quote-header-row"><h2 id="quote-heading">Quote</h2><span class="quote-chip">Draft</span></div>
+            <div class="quote-header-row"><h2 id="quote-heading">Estimate</h2><span class="quote-chip">Draft</span></div>
           </div>
           <div class="quote-body">
             <div class="quote-line"><span>Stock material</span><span id="materialCost">$0.00</span></div>
@@ -442,9 +444,9 @@
             <div class="quote-divider"></div>
             <div class="quote-line subtle"><span>Estimate includes</span><span id="featureSummary">No features selected</span></div>
             <div class="quote-actions">
-              <button id="copyQuote" class="button primary" type="button">Copy quote summary</button>
+              <button id="copyQuote" class="button" type="button">Copy Summary</button>
               <button id="newQuote" class="button" type="button">New quote</button>
-              <button id="exportPdf" class="button export-pdf" type="button">Export PDF</button>
+              <button id="exportPdf" class="button export-pdf primary" type="button">Export PDF</button>
             </div>
             <details class="settings">
               <summary>Stock &amp; rates</summary>
@@ -488,7 +490,7 @@
       <header class="print-header">
         <img class="print-logo" src="pinner-logo.png" alt="Pinner Machine Shop">
         <div class="print-title">
-          <h1 id="printHeading">Quote</h1>
+          <h1 id="printHeading">Estimate</h1>
           <p>Billet Billy · <span id="printDate"></span></p>
         </div>
       </header>
@@ -966,7 +968,7 @@
       if (quote.externalThreadsEnabled) features.push(`${quote.externalThreadsCount} external thread(s)`);
       if (quote.secondOpsEnabled) features.push(`${quote.secondOpsCount} second operation(s)`);
       const lines = [
-        `Quote${quote.customer ? ` for ${quote.customer}` : ""}`,
+        `Estimate${quote.customer ? ` for ${quote.customer}` : ""}`,
         `Part: ${quote.partName || "Unnamed part"} | Quantity: ${quantity}`,
         `Finished size: ${quote.length || "?"} × ${quote.width || "?"} × ${quote.thickness || "?"} ${quote.unit}`,
         `Stock allowance: length +${numberOrZero(quote.lengthAllowancePercent)}%; width and thickness cleanup ${numberOrZero(quote.cleanupAllowanceMm)} mm per side`,
@@ -1037,9 +1039,9 @@
       try {
         await navigator.clipboard.writeText(quoteSummary());
         event.target.textContent = "Copied!";
-        setTimeout(() => { event.target.textContent = "Copy quote summary"; }, 1500);
+        setTimeout(() => {         event.target.textContent = "Copy Summary"; }, 1500);
       } catch (error) {
-        window.prompt("Copy quote summary:", quoteSummary());
+        window.prompt("Copy Summary:", quoteSummary());
       }
     });
     document.getElementById("newQuote").addEventListener("click", () => {
