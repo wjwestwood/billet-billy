@@ -113,6 +113,8 @@
       font-size: .73rem;
       font-weight: 700;
     }
+    .rush-toggle { display: flex; align-items: center; gap: 8px; min-height: 40px; color: #cbd5e1; font-size: .78rem; font-weight: 700; cursor: pointer; }
+    .rush-toggle input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
     .optional { color: #64748b; font-size: .67rem; font-weight: 500; }
     input, select {
       width: 100%;
@@ -330,6 +332,7 @@
               <label for="material">Material</label>
               <select id="material"></select>
             </div>
+            <label class="rush-toggle" for="rushEnabled"><input id="rushEnabled" type="checkbox">Rush</label>
           </div>
         </section>
 
@@ -369,7 +372,7 @@
             </div>
           </div>
           <div id="stockResult" class="stock-result" aria-live="polite"></div>
-          <p id="stockHelp" class="hint">The recommended option is the lowest-priced blank that fits in any orientation.</p>
+          <p id="stockHelp" class="hint">The recommended option is the lowest material cost per part that fits. Stock Length is aligned with part Length.</p>
         </section>
 
         <section class="card" aria-labelledby="features-heading">
@@ -425,6 +428,7 @@
           <div class="quote-body">
             <div class="quote-line"><span>Stock material</span><span id="materialCost">$0.00</span></div>
             <div class="quote-line"><span>Machining labor</span><span id="laborCost">$0.00</span></div>
+            <div class="quote-line"><span id="rushLineLabel">Rush surcharge (off)</span><span id="rushCost">$0.00</span></div>
             <div class="quote-line"><span id="pitaLineLabel">PITA adjustment (0%)</span><span id="pitaCost">$0.00</span></div>
             <div class="quote-line subtle"><span id="laborDetail">Setup + cycle time</span><span id="laborMinutes">0 min</span></div>
             <div class="quote-line"><span>Quantity</span><span id="quoteQuantity">1 pc</span></div>
@@ -459,6 +463,7 @@
                 <div class="settings-group-title">Shop estimate inputs</div>
                 <div class="rate-grid">
                   <div class="field"><label for="hourlyRate">Shop rate ($ / hour)</label><input id="hourlyRate" type="number" min="0" step="any"></div>
+                  <div class="field"><label for="rushPercent">Rush surcharge (%)</label><input id="rushPercent" type="number" min="0" step="any"></div>
                   <div class="field"><label for="setupMinutes">Setup time (minutes / job)</label><input id="setupMinutes" type="number" min="0" step="1"></div>
                   <div class="field"><label for="cycleMinutes">Base cycle time (minutes / part)</label><input id="cycleMinutes" type="number" min="0" step="1"></div>
                   <div class="field"><label for="holeMinutes">Minutes / drilled hole</label><input id="holeMinutes" type="number" min="0" step="any"></div>
@@ -468,7 +473,7 @@
                   <div class="field"><label for="secondOpMinutes">Minutes / second operation</label><input id="secondOpMinutes" type="number" min="0" step="any"></div>
                 </div>
                 <div class="settings-actions"><button id="resetConfig" class="button" type="button">Restore example data</button></div>
-                <p class="footer-note">Estimate = (stock blank price × quantity + shop rate × estimated labor hours) × (1 + PITA factor). The PITA factor adds 3% per level to the material and labor subtotal. One blank per part; scrap/reuse, finishing, tax, and special tooling are not included.</p>
+                <p class="footer-note">Material is prorated by stock length used (finished part length plus length allowance) × quantity. Shop rate × estimated labor hours and enabled Rush and PITA surcharges are added separately; both surcharges are calculated from the material and labor subtotal. Scrap/reuse, finishing, tax, and special tooling are not included.</p>
               </div>
             </details>
           </div>
@@ -496,6 +501,7 @@
           <tr><th scope="row">Material</th><td id="printMaterial"></td></tr>
           <tr><th scope="row">Stock blank</th><td id="printStock"></td></tr>
           <tr><th scope="row">Stock allowance</th><td id="printAllowance"></td></tr>
+          <tr><th scope="row">Rush</th><td id="printRush"></td></tr>
           <tr><th scope="row">Machining features</th><td id="printFeatures"></td></tr>
           <tr><th scope="row">Notes</th><td id="printNotes"></td></tr>
         </tbody>
@@ -505,6 +511,7 @@
         <tbody>
           <tr><th scope="row">Stock material</th><td id="printMaterialCost"></td></tr>
           <tr><th scope="row">Machining labor</th><td id="printLaborCost"></td></tr>
+          <tr><th scope="row" id="printRushLabel"></th><td id="printRushCost"></td></tr>
           <tr><th scope="row" id="printPitaLabel"></th><td id="printPitaCost"></td></tr>
           <tr class="print-total"><th scope="row">Estimated total</th><td id="printTotal"></td></tr>
         </tbody>
@@ -528,7 +535,7 @@
         { id: "ss-1", material: "304 Stainless", length: 6, width: 2, thickness: 1, unit: "in", price: 34 }
       ],
       rates: {
-        hourlyRate: 85, setupMinutes: 30, cycleMinutes: 20, holeMinutes: 3, threadMinutes: 8,
+        hourlyRate: 85, rushPercent: 20, setupMinutes: 30, cycleMinutes: 20, holeMinutes: 3, threadMinutes: 8,
         externalThreadMinutes: 8, hexMinutes: 6, secondOpMinutes: 20
       }
     };
@@ -536,7 +543,7 @@
       customer: "", partName: "", quantity: 1, material: "6061 Aluminum",
       length: "", width: "", thickness: "", unit: "in", lengthAllowancePercent: 10,
       cleanupAllowanceMm: 1, stockId: "",
-      holesEnabled: false, holesCount: 1, threadsEnabled: false, threadsCount: 1, pitaFactor: 0,
+      rushEnabled: false, holesEnabled: false, holesCount: 1, threadsEnabled: false, threadsCount: 1, pitaFactor: 0,
       hexEnabled: false, hexCount: 1, externalThreadsEnabled: false, externalThreadsCount: 1,
       secondOpsEnabled: false, secondOpsCount: 1, notes: ""
     };
@@ -603,6 +610,16 @@
       return [stock.length, stock.width, stock.thickness].map(value => convert(numberOrZero(value), stock.unit || "in", unit));
     }
 
+    function requiredStockLength() {
+      const length = numberOrZero(document.getElementById("length").value);
+      return length * (1 + numberOrZero(quote.lengthAllowancePercent) / 100);
+    }
+
+    function stockMaterialCostPerPart(stock) {
+      const stockLength = convert(numberOrZero(stock.length), stock.unit || "in", quote.unit);
+      return stockLength > 0 ? numberOrZero(stock.price) * requiredStockLength() / stockLength : 0;
+    }
+
     function findFittingStock() {
       const material = document.getElementById("material").value;
       const dims = [
@@ -617,16 +634,21 @@
         dims[0] + lengthAllowance,
         dims[1] + cleanupPerSide * 2,
         dims[2] + cleanupPerSide * 2
-      ].sort((a, b) => a - b);
+      ];
       return config.stock
         .filter(stock => stock.material === material && numberOrZero(stock.price) >= 0)
         .map(stock => {
-          const available = stockSize(stock, quote.unit).sort((a, b) => a - b);
-          return { stock, fits: required.every((size, index) => available[index] + 1e-8 >= size) };
+          const [stockLength, ...crossSection] = stockSize(stock, quote.unit);
+          const [requiredLength, ...requiredCrossSection] = required;
+          crossSection.sort((a, b) => a - b);
+          requiredCrossSection.sort((a, b) => a - b);
+          const fits = stockLength + 1e-8 >= requiredLength &&
+            requiredCrossSection.every((size, index) => crossSection[index] + 1e-8 >= size);
+          return { stock, fits };
         })
         .filter(item => item.fits)
         .map(item => item.stock)
-        .sort((a, b) => numberOrZero(a.price) - numberOrZero(b.price) || a.length * a.width * a.thickness - b.length * b.width * b.thickness);
+        .sort((a, b) => stockMaterialCostPerPart(a) - stockMaterialCostPerPart(b) || a.length * a.width * a.thickness - b.length * b.width * b.thickness);
     }
 
     function formatStock(stock) {
@@ -652,7 +674,7 @@
       const selected = fits.find(stock => stock.id === quote.stockId) || fits[0] || null;
       quote.stockId = selected ? selected.id : "";
       select.innerHTML = fits.length
-        ? fits.map(stock => `<option value="${escapeHtml(stock.id)}">${escapeHtml(formatStock(stock))} — ${money(numberOrZero(stock.price))}</option>`).join("")
+        ? fits.map(stock => `<option value="${escapeHtml(stock.id)}">${escapeHtml(formatStock(stock))} — ${money(stockMaterialCostPerPart(stock))} material / part</option>`).join("")
         : '<option value="">No matching blank</option>';
       if (selected) select.value = selected.id;
       const hasPartDimensions = ["length", "width", "thickness"]
@@ -660,7 +682,7 @@
       const result = document.getElementById("stockResult");
       result.classList.toggle("no-fit", !selected && hasPartDimensions);
       result.innerHTML = selected
-        ? `<div><div class="stock-result-title">Best price that fits</div><div class="stock-result-name">${escapeHtml(formatStock(selected))}</div></div><div class="stock-result-price">${money(numberOrZero(selected.price))} / blank</div>`
+        ? `<div><div class="stock-result-title">Best material cost that fits</div><div class="stock-result-name">${escapeHtml(formatStock(selected))}</div></div><div class="stock-result-price">${money(stockMaterialCostPerPart(selected))} / part</div>`
         : `<div><div class="stock-result-title">Stock match</div><div class="stock-result-name">${hasPartDimensions ? "No stock blank fits these dimensions." : "Enter dimensions to find a stock blank."}</div></div>`;
       return selected;
     }
@@ -679,21 +701,25 @@
         (quote.secondOpsEnabled ? numberOrZero(quote.secondOpsCount) * numberOrZero(config.rates.secondOpMinutes) : 0);
       const cycle = numberOrZero(config.rates.cycleMinutes) + featureMinutes;
       const totalMinutes = numberOrZero(config.rates.setupMinutes) + cycle * quantity;
-      const materialCost = quoteReady ? numberOrZero(stock.price) * quantity : 0;
+      const materialCost = quoteReady ? stockMaterialCostPerPart(stock) * quantity : 0;
       const laborCost = quoteReady ? totalMinutes * numberOrZero(config.rates.hourlyRate) / 60 : 0;
       const pitaFactor = Math.min(PITA_MAX, Math.round(numberOrZero(quote.pitaFactor)));
       quote.pitaFactor = pitaFactor;
       const pitaRate = pitaFactor * PITA_RATE_PER_LEVEL;
       const pitaPercent = Math.round(pitaRate * 100);
+      const rushPercent = numberOrZero(config.rates.rushPercent);
       const subtotal = materialCost + laborCost;
       const pitaCost = quoteReady ? subtotal * pitaRate : 0;
-      const total = subtotal + pitaCost;
+      const rushCost = quoteReady && quote.rushEnabled ? subtotal * rushPercent / 100 : 0;
+      const total = subtotal + pitaCost + rushCost;
       document.getElementById("pitaFactor").value = pitaFactor;
       document.getElementById("pitaFactor").setAttribute("aria-valuetext", `Level ${pitaFactor} of ${PITA_MAX}; adds ${pitaPercent} percent`);
       document.getElementById("pitaFactorValue").textContent = `+${pitaPercent}%`;
       document.getElementById("pitaLineLabel").textContent = `PITA adjustment (${pitaPercent}%)`;
+      document.getElementById("rushLineLabel").textContent = quote.rushEnabled ? `Rush surcharge (${rushPercent}%)` : "Rush surcharge (off)";
       document.getElementById("materialCost").textContent = money(materialCost);
       document.getElementById("laborCost").textContent = money(laborCost);
+      document.getElementById("rushCost").textContent = money(rushCost);
       document.getElementById("pitaCost").textContent = money(pitaCost);
       document.getElementById("laborMinutes").textContent = `${totalMinutes.toFixed(0)} min`;
       document.getElementById("quoteQuantity").textContent = `${quantity} ${quantity === 1 ? "pc" : "pcs"}`;
@@ -720,7 +746,7 @@
       ["customer", "partName", "quantity", "length", "width", "thickness", "notes",
         "holesCount", "threadsCount", "hexCount", "externalThreadsCount", "secondOpsCount", "pitaFactor",
         "lengthAllowancePercent", "cleanupAllowanceMm"].forEach(key => setInputValue(key, quote[key]));
-      ["holesEnabled", "threadsEnabled", "hexEnabled", "externalThreadsEnabled", "secondOpsEnabled"].forEach(key => {
+      ["rushEnabled", "holesEnabled", "threadsEnabled", "hexEnabled", "externalThreadsEnabled", "secondOpsEnabled"].forEach(key => {
         document.getElementById(key).checked = Boolean(quote[key]);
       });
       document.querySelectorAll(".unit-button").forEach(button => {
@@ -774,7 +800,7 @@
       "holesCount", "threadsCount", "hexCount", "externalThreadsCount", "secondOpsCount"].forEach(id => bindQuoteField(id, id));
     bindQuoteField("pitaFactor", "pitaFactor", Number);
     bindQuoteField("material", "material");
-    ["holesEnabled", "threadsEnabled", "hexEnabled", "externalThreadsEnabled", "secondOpsEnabled"].forEach(id => {
+    ["rushEnabled", "holesEnabled", "threadsEnabled", "hexEnabled", "externalThreadsEnabled", "secondOpsEnabled"].forEach(id => {
       document.getElementById(id).addEventListener("change", () => {
         quote[id] = document.getElementById(id).checked;
         renderFeatureRows();
@@ -936,7 +962,8 @@
         `Finished size: ${quote.length || "?"} × ${quote.width || "?"} × ${quote.thickness || "?"} ${quote.unit}`,
         `Stock allowance: length +${numberOrZero(quote.lengthAllowancePercent)}%; width and thickness cleanup ${numberOrZero(quote.cleanupAllowanceMm)} mm per side`,
         `Material: ${quote.material || "Not selected"}`,
-        `Stock: ${stock ? `${formatStock(stock)} at ${money(numberOrZero(stock.price))} per blank` : "No matching stock selected"}`,
+        `Stock: ${stock ? `${formatStock(stock)}; ${requiredStockLength().toFixed(2)} ${quote.unit} used, ${money(stockMaterialCostPerPart(stock))} material per part (${money(numberOrZero(stock.price))} per ${stock.length} ${stock.unit || "in"})` : "No matching stock selected"}`,
+        `Rush: ${quote.rushEnabled ? `Yes (+${numberOrZero(config.rates.rushPercent)}%)` : "No"}`,
         `Features: ${features.join(", ") || "None specified"}`,
         `PITA factor: ${pitaFactor}/${PITA_MAX} (+${pitaPercent}%)`,
         `Notes: ${quote.notes || "None"}`,
@@ -964,12 +991,15 @@
         printQuantity: `${quantity} ${quantity === 1 ? "pc" : "pcs"}`,
         printDimensions: `${quote.length || "?"} × ${quote.width || "?"} × ${quote.thickness || "?"} ${quote.unit}`,
         printMaterial: quote.material || "Not selected",
-        printStock: stock ? `${formatStock(stock)} · ${money(numberOrZero(stock.price))} per blank` : "No matching stock selected",
+        printStock: stock ? `${formatStock(stock)} · ${requiredStockLength().toFixed(2)} ${quote.unit} used · ${money(stockMaterialCostPerPart(stock))} material per part (${money(numberOrZero(stock.price))} per ${stock.length} ${stock.unit || "in"})` : "No matching stock selected",
         printAllowance: `Length +${numberOrZero(quote.lengthAllowancePercent)}%; width and thickness cleanup ${numberOrZero(quote.cleanupAllowanceMm)} mm per side`,
+        printRush: quote.rushEnabled ? `Yes (+${numberOrZero(config.rates.rushPercent)}%)` : "No",
+        printRushLabel: quote.rushEnabled ? `Rush surcharge (${numberOrZero(config.rates.rushPercent)}%)` : "Rush surcharge (off)",
         printFeatures: features.join(", ") || "None specified",
         printNotes: quote.notes || "None",
         printMaterialCost: document.getElementById("materialCost").textContent,
         printLaborCost: document.getElementById("laborCost").textContent,
+        printRushCost: document.getElementById("rushCost").textContent,
         printPitaLabel: `PITA adjustment (${pitaPercent}%)`,
         printPitaCost: document.getElementById("pitaCost").textContent,
         printTotal: document.getElementById("totalCost").textContent,
