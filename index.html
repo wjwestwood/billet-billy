@@ -153,7 +153,7 @@
       justify-content: space-between;
       align-items: center;
       gap: 12px;
-      min-height: 56px;
+      min-height: 72px;
       margin-top: 12px;
       padding: 11px 13px;
       border: 1px solid rgba(56, 189, 248, .23);
@@ -162,7 +162,9 @@
     }
     .stock-result.no-fit { border-color: rgba(239, 68, 68, .3); background: rgba(239, 68, 68, .06); }
     .stock-result-title { color: var(--muted); font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
-    .stock-result-name { margin-top: 2px; font-size: .82rem; font-weight: 700; }
+    .stock-status { display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px; border: 1px solid rgba(16, 185, 129, .35); border-radius: 999px; background: rgba(16, 185, 129, .13); color: #6ee7b7; font-size: .62rem; font-weight: 800; letter-spacing: .03em; white-space: nowrap; }
+    .stock-status-placeholder { visibility: hidden; }
+    .stock-result-name { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-top: 2px; font-size: .82rem; font-weight: 700; }
     .stock-result-price { color: var(--primary); font: 700 .9rem "JetBrains Mono", monospace; white-space: nowrap; }
     .feature-list { display: grid; gap: 8px; }
     .feature-row {
@@ -238,11 +240,12 @@
     .settings-note { margin: 0 0 12px; color: var(--muted); font-size: .7rem; }
     .settings-group-title { margin: 16px 0 8px; color: #cbd5e1; font-size: .72rem; font-weight: 800; }
     .stock-table-wrap { overflow-x: auto; }
-    .stock-table { width: 100%; min-width: 570px; border-collapse: separate; border-spacing: 0 5px; }
+    .stock-table { width: 100%; min-width: 620px; border-collapse: separate; border-spacing: 0 5px; }
     .stock-table th { padding: 0 5px 3px; color: var(--muted); font-size: .61rem; font-weight: 700; text-align: left; }
     .stock-table td { padding: 0 3px; }
     .stock-table input, .stock-table select { height: 33px; padding: 5px 6px; font-size: .69rem; }
     .stock-table input[type="number"] { font-size: .68rem; }
+    .stock-table input[type="checkbox"] { width: 16px; height: 16px; margin: 0 auto; padding: 0; accent-color: var(--success); }
     .stock-table .remove-stock { width: 31px; height: 31px; border: 0; border-radius: 6px; background: rgba(239, 68, 68, .12); color: #fca5a5; font-size: 1rem; }
     .settings-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
     .settings-actions .button { min-height: 33px; font-size: .68rem; }
@@ -450,7 +453,7 @@
                 <div class="settings-group-title">Stock catalog</div>
                 <div class="stock-table-wrap">
                   <table class="stock-table">
-                    <thead><tr><th>Material / stock</th><th>Length</th><th>Width</th><th>Thick.</th><th>Unit</th><th>Price / blank</th><th></th></tr></thead>
+                    <thead><tr><th>Material / stock</th><th>Length</th><th>Width</th><th>Thick.</th><th>Unit</th><th>Price / blank</th><th>In stock</th><th></th></tr></thead>
                     <tbody id="stockRows"></tbody>
                   </table>
                 </div>
@@ -510,7 +513,7 @@
       <table class="print-table print-costs">
         <tbody>
           <tr><th scope="row">Stock material</th><td id="printMaterialCost"></td></tr>
-          <tr><th scope="row" id="printLaborLabel">Machining labor</th><td id="printLaborCost"></td></tr>
+          <tr><th scope="row" id="printLaborLabel">Machining Labour</th><td id="printLaborCost"></td></tr>
           <tr><th scope="row" id="printRushLabel"></th><td id="printRushCost"></td></tr>
           <tr class="print-total"><th scope="row">Estimated total</th><td id="printTotal"></td></tr>
         </tbody>
@@ -694,7 +697,7 @@
       const result = document.getElementById("stockResult");
       result.classList.toggle("no-fit", !selected && hasPartDimensions);
       result.innerHTML = selected
-        ? `<div><div class="stock-result-title">Best material cost that fits</div><div class="stock-result-name">${escapeHtml(formatStock(selected))}</div></div><div class="stock-result-price">${money(stockMaterialCostPerPart(selected))} / part</div>`
+        ? `<div><div class="stock-result-title">Best material cost that fits</div><div class="stock-result-name">${escapeHtml(formatStock(selected))}<span class="stock-status${selected.inStock ? "" : " stock-status-placeholder"}"${selected.inStock ? "" : ' aria-hidden="true"'}><span aria-hidden="true">✓</span> In stock</span></div></div><div class="stock-result-price">${money(stockMaterialCostPerPart(selected))} / part</div>`
         : `<div><div class="stock-result-title">Stock match</div><div class="stock-result-name">${hasPartDimensions ? "No stock blank fits these dimensions." : "Enter dimensions to find a stock blank."}</div></div>`;
       return selected;
     }
@@ -778,6 +781,7 @@
           <td><input data-key="thickness" aria-label="Stock thickness" type="number" min="0" step="any" value="${escapeHtml(stock.thickness)}"></td>
           <td><select data-key="unit" aria-label="Stock unit"><option value="in" ${stock.unit === "in" ? "selected" : ""}>in</option><option value="mm" ${stock.unit === "mm" ? "selected" : ""}>mm</option></select></td>
           <td><input data-key="price" aria-label="Price per stock blank" type="number" min="0" step="any" value="${escapeHtml(stock.price)}"></td>
+          <td><input data-key="inStock" aria-label="${escapeHtml(stock.material)} ${escapeHtml(stock.length)} ${escapeHtml(stock.unit || "in")} in stock" type="checkbox" ${stock.inStock ? "checked" : ""}></td>
           <td><button class="remove-stock" type="button" aria-label="Remove stock row">×</button></td>
         </tr>`).join("");
       Object.keys(config.rates).forEach(key => setInputValue(key, config.rates[key]));
@@ -839,7 +843,7 @@
       const row = input.closest("[data-stock-index]");
       const stock = config.stock[Number(row.dataset.stockIndex)];
       const key = input.dataset.key;
-      stock[key] = key === "material" || key === "unit" ? input.value : numberOrZero(input.value);
+      stock[key] = key === "inStock" ? input.checked : key === "material" || key === "unit" ? input.value : numberOrZero(input.value);
       persistConfig();
       renderMaterials();
       renderQuote();
@@ -864,7 +868,7 @@
     document.getElementById("addStock").addEventListener("click", () => {
       config.stock.push({
         id: `stock-${Date.now()}`, material: "New material", length: 6, width: 2,
-        thickness: 1, unit: "in", price: 0
+        thickness: 1, unit: "in", price: 0, inStock: false
       });
       persistConfig();
       renderSettings();
@@ -904,7 +908,7 @@
     }
 
     document.getElementById("exportCatalog").addEventListener("click", () => {
-      const header = ["material", "length", "width", "thickness", "unit", "price"];
+      const header = ["material", "length", "width", "thickness", "unit", "price", "inStock"];
       const lines = [header.join(","), ...config.stock.map(stock => header.map(key => csvCell(stock[key])).join(","))];
       const blob = new Blob([lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob);
@@ -929,7 +933,8 @@
             id: `stock-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
             material: data.material.trim(),
             length: Number(data.length), width: Number(data.width), thickness: Number(data.thickness),
-            unit: data.unit.trim().toLowerCase(), price: Number(data.price)
+            unit: data.unit.trim().toLowerCase(), price: Number(data.price),
+            inStock: String(data.instock || "").trim().toLowerCase() === "true"
           };
           if (!stock.material || ![stock.length, stock.width, stock.thickness, stock.price].every(Number.isFinite) ||
               [stock.length, stock.width, stock.thickness, stock.price].some(value => value < 0) ||
@@ -982,7 +987,6 @@
       const stock = config.stock.find(item => item.id === quote.stockId);
       const quantity = Math.max(1, Math.floor(numberOrZero(quote.quantity) || 1));
       const pitaFactor = Math.min(PITA_MAX, Math.max(0, numberOrZero(quote.pitaFactor)));
-      const pitaPercent = Math.round(pitaFactor * PITA_RATE_PER_LEVEL * 100);
       const quoteReady = Boolean(stock && ["length", "width", "thickness"]
         .every(id => numberOrZero(document.getElementById(id).value) > 0));
       const laborEstimate = estimateLabor(quantity);
@@ -1008,7 +1012,7 @@
         printFeatures: features.join(", ") || "None specified",
         printNotes: quote.notes || "None",
         printMaterialCost: document.getElementById("materialCost").textContent,
-        printLaborLabel: pitaPercent ? `Machining labor (includes ${pitaPercent}% PITA)` : "Machining labor",
+        printLaborLabel: "Machining Labour",
         printLaborCost: money(laborCost + laborPita),
         printRushCost: document.getElementById("rushCost").textContent,
         printTotal: document.getElementById("totalCost").textContent,
