@@ -426,7 +426,7 @@
       <div class="quote-column">
         <aside class="card quote-card" aria-labelledby="quote-heading">
           <div class="quote-header">
-            <div class="quote-header-row"><h2 id="quote-heading">Quote estimate</h2><span class="quote-chip">Draft</span></div>
+            <div class="quote-header-row"><h2 id="quote-heading">Quote</h2><span class="quote-chip">Draft</span></div>
           </div>
           <div class="quote-body">
             <div class="quote-line"><span>Stock material</span><span id="materialCost">$0.00</span></div>
@@ -488,7 +488,7 @@
       <header class="print-header">
         <img class="print-logo" src="pinner-logo.png" alt="Pinner Machine Shop">
         <div class="print-title">
-          <h1 id="printHeading">Quote estimate</h1>
+          <h1 id="printHeading">Quote</h1>
           <p>Billet Billy · <span id="printDate"></span></p>
         </div>
       </header>
@@ -503,7 +503,6 @@
           <tr><th scope="row">Finished size</th><td id="printDimensions"></td></tr>
           <tr><th scope="row">Material</th><td id="printMaterial"></td></tr>
           <tr><th scope="row">Stock blank</th><td id="printStock"></td></tr>
-          <tr><th scope="row">Stock allowance</th><td id="printAllowance"></td></tr>
           <tr><th scope="row">Rush</th><td id="printRush"></td></tr>
           <tr><th scope="row">Machining features</th><td id="printFeatures"></td></tr>
           <tr><th scope="row">Notes</th><td id="printNotes"></td></tr>
@@ -967,7 +966,7 @@
       if (quote.externalThreadsEnabled) features.push(`${quote.externalThreadsCount} external thread(s)`);
       if (quote.secondOpsEnabled) features.push(`${quote.secondOpsCount} second operation(s)`);
       const lines = [
-        `Quote estimate${quote.customer ? ` for ${quote.customer}` : ""}`,
+        `Quote${quote.customer ? ` for ${quote.customer}` : ""}`,
         `Part: ${quote.partName || "Unnamed part"} | Quantity: ${quantity}`,
         `Finished size: ${quote.length || "?"} × ${quote.width || "?"} × ${quote.thickness || "?"} ${quote.unit}`,
         `Stock allowance: length +${numberOrZero(quote.lengthAllowancePercent)}%; width and thickness cleanup ${numberOrZero(quote.cleanupAllowanceMm)} mm per side`,
@@ -999,16 +998,22 @@
       if (quote.externalThreadsEnabled) features.push(`${numberOrZero(quote.externalThreadsCount)} external threads`);
       if (quote.secondOpsEnabled) features.push(`${numberOrZero(quote.secondOpsCount)} second operations`);
       const printValues = {
-        printDate: new Date().toLocaleDateString(),
+        printDate: new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+          .format(new Date()).replace(/ /g, "-"),
         printCustomer: quote.customer || "—",
         printPartName: quote.partName || "Unnamed part",
         printQuantity: `${quantity} ${quantity === 1 ? "pc" : "pcs"}`,
         printDimensions: `${quote.length || "?"} × ${quote.width || "?"} × ${quote.thickness || "?"} ${quote.unit}`,
         printMaterial: quote.material || "Not selected",
-        printStock: stock ? `${formatStock(stock)} · ${requiredStockLength().toFixed(2)} ${quote.unit} used · ${money(stockMaterialCostPerPart(stock))} material per part (${money(numberOrZero(stock.price))} per ${stock.length} ${stock.unit || "in"})` : "No matching stock selected",
-        printAllowance: `Length +${numberOrZero(quote.lengthAllowancePercent)}%; width and thickness cleanup ${numberOrZero(quote.cleanupAllowanceMm)} mm per side`,
-        printRush: quote.rushEnabled ? `Yes (+${numberOrZero(config.rates.rushPercent)}%)` : "No",
-        printRushLabel: quote.rushEnabled ? `Rush surcharge (${numberOrZero(config.rates.rushPercent)}%)` : "Rush surcharge (off)",
+        printStock: stock
+          ? `${formatStock(stock)} · required cut size ${requiredStockLength().toFixed(2)} × ${(
+            numberOrZero(quote.width) + convert(numberOrZero(quote.cleanupAllowanceMm) * 2, "mm", quote.unit)
+          ).toFixed(2)} × ${(
+            numberOrZero(quote.thickness) + convert(numberOrZero(quote.cleanupAllowanceMm) * 2, "mm", quote.unit)
+          ).toFixed(2)} ${quote.unit} (allowances included) · ${money(stockMaterialCostPerPart(stock))} material per part (${money(numberOrZero(stock.price))} per ${stock.length} ${stock.unit || "in"})`
+          : "No matching stock selected",
+        printRush: quote.rushEnabled ? "Yes" : "No",
+        printRushLabel: "Rush surcharge",
         printFeatures: features.join(", ") || "None specified",
         printNotes: quote.notes || "None",
         printMaterialCost: document.getElementById("materialCost").textContent,
