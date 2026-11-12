@@ -102,6 +102,7 @@
     h2 { margin: 0; font-size: .98rem; letter-spacing: -.015em; }
     .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px 12px; }
     .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid.stock-allowance-grid { grid-template-columns: minmax(0, .7fr) minmax(0, .7fr) minmax(0, 1.6fr); }
     .field { min-width: 0; }
     .field label, .field-label {
       display: flex;
@@ -214,6 +215,8 @@
     .total-value { margin-top: 3px; color: var(--accent); font: 700 2rem "JetBrains Mono", monospace; letter-spacing: -.06em; }
     .unit-price { margin-top: 4px; color: var(--muted); font-size: .74rem; }
     .quote-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 18px; }
+    .quote-actions .export-pdf { grid-column: 1 / -1; }
+    .print-document { display: none; }
     .button {
       min-height: 39px;
       padding: 8px 10px;
@@ -267,6 +270,31 @@
       .brand-logo { width: 86px; height: 34px; }
       .brand-tag { display: none; }
       .draft-status { font-size: .68rem; }
+    }
+    @media print {
+      @page { margin: 14mm; }
+      body { background: #fff !important; color: #111 !important; font: 10pt/1.45 Arial, sans-serif; }
+      body > .topbar, main > .layout { display: none !important; }
+      main { max-width: none; margin: 0; padding: 0; }
+      .print-document { display: block; color: #111; }
+      .print-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding-bottom: 14px; border-bottom: 2px solid #111; }
+      .print-logo { display: block; width: 165px; height: 66px; object-fit: contain; }
+      .print-title { text-align: right; }
+      .print-title h1 { margin: 0; font-size: 21pt; letter-spacing: 0; }
+      .print-title p { margin: 3px 0 0; color: #444; }
+      .print-meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin: 20px 0 24px; }
+      .print-meta span, .print-label { display: block; margin-bottom: 3px; color: #444; font-size: 8pt; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+      .print-meta strong { font-size: 11pt; }
+      .print-document h2 { margin: 22px 0 8px; padding-bottom: 5px; border-bottom: 1px solid #777; font-size: 11pt; }
+      .print-table { width: 100%; border-collapse: collapse; }
+      .print-table th, .print-table td { padding: 7px 4px; border-bottom: 1px solid #ccc; text-align: left; vertical-align: top; }
+      .print-table th { width: 34%; font-weight: 600; }
+      .print-table td { overflow-wrap: anywhere; }
+      .print-costs th { width: auto; }
+      .print-costs td { text-align: right; white-space: nowrap; }
+      .print-costs .print-total th, .print-costs .print-total td { border-top: 2px solid #111; border-bottom: 2px solid #111; background: #eee; font-size: 13pt; font-weight: 700; }
+      .print-unit-price { margin-top: 8px; text-align: right; font-weight: 600; }
+      .print-disclaimer { margin-top: 26px; padding-top: 8px; border-top: 1px solid #999; color: #444; font-size: 8pt; }
     }
   </style>
 </head>
@@ -325,11 +353,15 @@
               <button class="unit-button" type="button" data-unit="mm" aria-pressed="false">MM</button>
             </div>
           </div>
-          <p class="hint">Enter finished-part size. Add machining allowance below if your shop needs extra stock around each side.</p>
-          <div class="grid" style="margin-top:13px">
+          <p class="hint">Extra length is a percentage of the finished length. Cleanup adds material on each side of the width and thickness.</p>
+          <div class="grid three stock-allowance-grid" style="margin-top:13px">
             <div class="field">
-              <label for="allowance">Allowance per side <span class="optional">same units</span></label>
-              <input id="allowance" type="number" min="0" step="any" value="0" inputmode="decimal">
+              <label for="lengthAllowancePercent">Length allowance <span class="optional">(%)</span></label>
+              <input id="lengthAllowancePercent" type="number" min="0" step="any" value="10" inputmode="decimal">
+            </div>
+            <div class="field">
+              <label for="cleanupAllowanceMm">Cleanup <span class="optional">(mm)</span></label>
+              <input id="cleanupAllowanceMm" type="number" min="0" step="any" value="1" inputmode="decimal">
             </div>
             <div class="field">
               <label for="stockSelect">Stock blank</label>
@@ -405,6 +437,7 @@
             <div class="quote-actions">
               <button id="copyQuote" class="button primary" type="button">Copy quote summary</button>
               <button id="newQuote" class="button" type="button">New quote</button>
+              <button id="exportPdf" class="button export-pdf" type="button">Export PDF</button>
             </div>
             <details class="settings">
               <summary>Stock &amp; rates</summary>
@@ -443,6 +476,42 @@
         <div class="demo-note"><strong>Prototype data:</strong> example stock prices and shop rates are placeholders. Replace them in “Stock &amp; rates” before using a quote with a customer.</div>
       </div>
     </div>
+    <section id="printDocument" class="print-document" aria-labelledby="printHeading">
+      <header class="print-header">
+        <img class="print-logo" src="pinner-logo.png" alt="Pinner Machine Shop">
+        <div class="print-title">
+          <h1 id="printHeading">Quote estimate</h1>
+          <p>Billet Billy · <span id="printDate"></span></p>
+        </div>
+      </header>
+      <div class="print-meta">
+        <div><span>Customer</span><strong id="printCustomer">—</strong></div>
+        <div><span>Part</span><strong id="printPartName">—</strong></div>
+        <div><span>Quantity</span><strong id="printQuantity">—</strong></div>
+      </div>
+      <h2>Part details</h2>
+      <table class="print-table">
+        <tbody>
+          <tr><th scope="row">Finished size</th><td id="printDimensions"></td></tr>
+          <tr><th scope="row">Material</th><td id="printMaterial"></td></tr>
+          <tr><th scope="row">Stock blank</th><td id="printStock"></td></tr>
+          <tr><th scope="row">Stock allowance</th><td id="printAllowance"></td></tr>
+          <tr><th scope="row">Machining features</th><td id="printFeatures"></td></tr>
+          <tr><th scope="row">Notes</th><td id="printNotes"></td></tr>
+        </tbody>
+      </table>
+      <h2>Estimate</h2>
+      <table class="print-table print-costs">
+        <tbody>
+          <tr><th scope="row">Stock material</th><td id="printMaterialCost"></td></tr>
+          <tr><th scope="row">Machining labor</th><td id="printLaborCost"></td></tr>
+          <tr><th scope="row" id="printPitaLabel"></th><td id="printPitaCost"></td></tr>
+          <tr class="print-total"><th scope="row">Estimated total</th><td id="printTotal"></td></tr>
+        </tbody>
+      </table>
+      <p id="printUnitPrice" class="print-unit-price"></p>
+      <p class="print-disclaimer">Estimate only. Verify material, tolerances, finish, and shop pricing before quoting. Estimate excludes scrap/reuse, finishing, tax, and special tooling.</p>
+    </section>
   </main>
 
   <script>
@@ -465,7 +534,8 @@
     };
     const DEFAULT_QUOTE = {
       customer: "", partName: "", quantity: 1, material: "6061 Aluminum",
-      length: "", width: "", thickness: "", unit: "in", allowance: 0, stockId: "",
+      length: "", width: "", thickness: "", unit: "in", lengthAllowancePercent: 10,
+      cleanupAllowanceMm: 1, stockId: "",
       holesEnabled: false, holesCount: 1, threadsEnabled: false, threadsCount: 1, pitaFactor: 0,
       hexEnabled: false, hexCount: 1, externalThreadsEnabled: false, externalThreadsCount: 1,
       secondOpsEnabled: false, secondOpsCount: 1, notes: ""
@@ -540,9 +610,14 @@
         numberOrZero(document.getElementById("width").value),
         numberOrZero(document.getElementById("thickness").value)
       ];
-      const allowance = numberOrZero(document.getElementById("allowance").value) * 2;
       if (!dims.every(value => value > 0)) return [];
-      const required = dims.map(value => value + allowance).sort((a, b) => a - b);
+      const lengthAllowance = dims[0] * numberOrZero(quote.lengthAllowancePercent) / 100;
+      const cleanupPerSide = convert(numberOrZero(quote.cleanupAllowanceMm), "mm", quote.unit);
+      const required = [
+        dims[0] + lengthAllowance,
+        dims[1] + cleanupPerSide * 2,
+        dims[2] + cleanupPerSide * 2
+      ].sort((a, b) => a - b);
       return config.stock
         .filter(stock => stock.material === material && numberOrZero(stock.price) >= 0)
         .map(stock => {
@@ -642,8 +717,9 @@
     }
 
     function applyQuoteToForm() {
-      ["customer", "partName", "quantity", "length", "width", "thickness", "allowance", "notes",
-        "holesCount", "threadsCount", "hexCount", "externalThreadsCount", "secondOpsCount", "pitaFactor"].forEach(key => setInputValue(key, quote[key]));
+      ["customer", "partName", "quantity", "length", "width", "thickness", "notes",
+        "holesCount", "threadsCount", "hexCount", "externalThreadsCount", "secondOpsCount", "pitaFactor",
+        "lengthAllowancePercent", "cleanupAllowanceMm"].forEach(key => setInputValue(key, quote[key]));
       ["holesEnabled", "threadsEnabled", "hexEnabled", "externalThreadsEnabled", "secondOpsEnabled"].forEach(key => {
         document.getElementById(key).checked = Boolean(quote[key]);
       });
@@ -693,7 +769,8 @@
       });
     }
 
-    ["customer", "partName", "quantity", "length", "width", "thickness", "allowance", "notes",
+    ["customer", "partName", "quantity", "length", "width", "thickness", "notes",
+      "lengthAllowancePercent", "cleanupAllowanceMm",
       "holesCount", "threadsCount", "hexCount", "externalThreadsCount", "secondOpsCount"].forEach(id => bindQuoteField(id, id));
     bindQuoteField("pitaFactor", "pitaFactor", Number);
     bindQuoteField("material", "material");
@@ -712,7 +789,7 @@
       button.addEventListener("click", () => {
         const nextUnit = button.dataset.unit;
         if (nextUnit !== quote.unit) {
-          ["length", "width", "thickness", "allowance"].forEach(key => {
+          ["length", "width", "thickness"].forEach(key => {
             if (quote[key] === "" || quote[key] == null) return;
             const converted = convert(numberOrZero(quote[key]), quote.unit, nextUnit);
             quote[key] = Number(converted.toFixed(4));
@@ -857,6 +934,7 @@
         `Quote estimate${quote.customer ? ` for ${quote.customer}` : ""}`,
         `Part: ${quote.partName || "Unnamed part"} | Quantity: ${quantity}`,
         `Finished size: ${quote.length || "?"} × ${quote.width || "?"} × ${quote.thickness || "?"} ${quote.unit}`,
+        `Stock allowance: length +${numberOrZero(quote.lengthAllowancePercent)}%; width and thickness cleanup ${numberOrZero(quote.cleanupAllowanceMm)} mm per side`,
         `Material: ${quote.material || "Not selected"}`,
         `Stock: ${stock ? `${formatStock(stock)} at ${money(numberOrZero(stock.price))} per blank` : "No matching stock selected"}`,
         `Features: ${features.join(", ") || "None specified"}`,
@@ -867,6 +945,45 @@
       ];
       return lines.join("\n");
     }
+
+    function renderPrintDocument() {
+      const stock = config.stock.find(item => item.id === quote.stockId);
+      const quantity = Math.max(1, Math.floor(numberOrZero(quote.quantity) || 1));
+      const pitaFactor = Math.min(PITA_MAX, Math.max(0, numberOrZero(quote.pitaFactor)));
+      const pitaPercent = Math.round(pitaFactor * PITA_RATE_PER_LEVEL * 100);
+      const features = [];
+      if (quote.holesEnabled) features.push(`${numberOrZero(quote.holesCount)} drilled holes`);
+      if (quote.threadsEnabled) features.push(`${numberOrZero(quote.threadsCount)} threaded holes`);
+      if (quote.hexEnabled) features.push(`${numberOrZero(quote.hexCount)} hex sockets`);
+      if (quote.externalThreadsEnabled) features.push(`${numberOrZero(quote.externalThreadsCount)} external threads`);
+      if (quote.secondOpsEnabled) features.push(`${numberOrZero(quote.secondOpsCount)} second operations`);
+      const printValues = {
+        printDate: new Date().toLocaleDateString(),
+        printCustomer: quote.customer || "—",
+        printPartName: quote.partName || "Unnamed part",
+        printQuantity: `${quantity} ${quantity === 1 ? "pc" : "pcs"}`,
+        printDimensions: `${quote.length || "?"} × ${quote.width || "?"} × ${quote.thickness || "?"} ${quote.unit}`,
+        printMaterial: quote.material || "Not selected",
+        printStock: stock ? `${formatStock(stock)} · ${money(numberOrZero(stock.price))} per blank` : "No matching stock selected",
+        printAllowance: `Length +${numberOrZero(quote.lengthAllowancePercent)}%; width and thickness cleanup ${numberOrZero(quote.cleanupAllowanceMm)} mm per side`,
+        printFeatures: features.join(", ") || "None specified",
+        printNotes: quote.notes || "None",
+        printMaterialCost: document.getElementById("materialCost").textContent,
+        printLaborCost: document.getElementById("laborCost").textContent,
+        printPitaLabel: `PITA adjustment (${pitaPercent}%)`,
+        printPitaCost: document.getElementById("pitaCost").textContent,
+        printTotal: document.getElementById("totalCost").textContent,
+        printUnitPrice: document.getElementById("unitPrice").textContent
+      };
+      Object.entries(printValues).forEach(([id, value]) => {
+        document.getElementById(id).textContent = value;
+      });
+    }
+
+    document.getElementById("exportPdf").addEventListener("click", () => {
+      renderPrintDocument();
+      window.print();
+    });
 
     document.getElementById("copyQuote").addEventListener("click", async event => {
       try {
