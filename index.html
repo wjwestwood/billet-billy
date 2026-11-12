@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Billet Billy | Shop Quote</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f172a;
+      --header: #111827;
+      --card: #1e293b;
+      --card-border: #334155;
+      --field: #0f172a;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #f59e0b;
+      --accent-hover: #d97706;
+      --primary: #38bdf8;
+      --success: #10b981;
+      --danger: #ef4444;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font: 400 14px/1.5 "Plus Jakarta Sans", sans-serif;
+    }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .topbar {
+      min-height: 64px;
+      padding: 12px max(20px, calc((100vw - 1180px) / 2));
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      background: var(--header);
+      border-bottom: 1px solid #1f2937;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-logo { display: block; width: 132px; height: 52px; object-fit: contain; filter: brightness(0) invert(1); }
+    .brand-name { font-size: 1rem; font-weight: 800; letter-spacing: -.03em; }
+    .brand-tag {
+      margin-left: 4px;
+      padding: 3px 7px;
+      border-radius: 5px;
+      background: #253347;
+      color: var(--primary);
+      font-size: .64rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .draft-status { color: var(--muted); font-size: .78rem; }
+    .draft-status::before {
+      content: "";
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      margin: 0 7px 1px 0;
+      border-radius: 50%;
+      background: var(--success);
+    }
+    main { max-width: 1180px; margin: 0 auto; padding: 32px 20px 56px; }
+    .demo-note {
+      max-width: 390px;
+      padding: 9px 12px;
+      border: 1px solid rgba(245, 158, 11, .32);
+      border-radius: 9px;
+      background: rgba(245, 158, 11, .08);
+      color: #fcd34d;
+      font-size: .74rem;
+    }
+    .layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(310px, .8fr); gap: 18px; align-items: start; }
+    .form-column { display: grid; gap: 14px; }
+    .quote-column { display: grid; align-content: start; gap: 14px; min-width: 0; }
+    .quote-column .demo-note { max-width: none; }
+    .card {
+      padding: 20px;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      background: var(--card);
+    }
+    .section-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+    .section-number {
+      display: grid;
+      place-items: center;
+      width: 25px;
+      height: 25px;
+      border-radius: 7px;
+      background: rgba(56, 189, 248, .12);
+      color: var(--primary);
+      font: 700 .72rem "JetBrains Mono", monospace;
+    }
+    h2 { margin: 0; font-size: .98rem; letter-spacing: -.015em; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px 12px; }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .field { min-width: 0; }
+    .field label, .field-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0 0 6px;
+      color: #cbd5e1;
+      font-size: .73rem;
+      font-weight: 700;
+    }
+    .optional { color: #64748b; font-size: .67rem; font-weight: 500; }
+    input, select {
+      width: 100%;
+      min-width: 0;
+      height: 40px;
+      padding: 8px 10px;
+      border: 1px solid var(--card-border);
+      border-radius: 7px;
+      outline: none;
+      background: var(--field);
+      color: var(--text);
+      transition: border-color .15s, box-shadow .15s;
+    }
+    input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(56, 189, 248, .12); }
+    input::placeholder { color: #64748b; }
+    input[type="number"] { font-family: "JetBrains Mono", monospace; font-size: .82rem; }
+    select { cursor: pointer; }
+    .unit-control { display: flex; gap: 5px; }
+    .unit-button {
+      height: 40px;
+      min-width: 47px;
+      padding: 0 11px;
+      border: 1px solid var(--card-border);
+      border-radius: 7px;
+      background: #253347;
+      color: var(--muted);
+      font-size: .77rem;
+      font-weight: 700;
+    }
+    .unit-button[aria-pressed="true"] { border-color: var(--accent); background: rgba(245, 158, 11, .12); color: var(--accent); }
+    .dimensions-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 10px; align-items: end; }
+    .dimension-unit { padding-bottom: 0; }
+    .hint { margin: 9px 0 0; color: var(--muted); font-size: .72rem; }
+    .stock-result {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      min-height: 56px;
+      margin-top: 12px;
+      padding: 11px 13px;
+      border: 1px solid rgba(56, 189, 248, .23);
+      border-radius: 9px;
+      background: rgba(56, 189, 248, .06);
+    }
+    .stock-result.no-fit { border-color: rgba(239, 68, 68, .3); background: rgba(239, 68, 68, .06); }
+    .stock-result-title { color: var(--muted); font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+    .stock-result-name { margin-top: 2px; font-size: .82rem; font-weight: 700; }
+    .stock-result-price { color: var(--primary); font: 700 .9rem "JetBrains Mono", monospace; white-space: nowrap; }
+    .feature-list { display: grid; gap: 8px; }
+    .feature-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 100px;
+      align-items: center;
+      gap: 12px;
+      min-height: 56px;
+      padding: 10px 11px;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      background: #1a2638;
+    }
+    .feature-name { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: .8rem; }
+    .feature-name small { display: block; margin-top: 1px; color: var(--muted); font-size: .67rem; font-weight: 400; }
+    .feature-name input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
+    .count-field { display: none; }
+    .count-field.visible { display: flex; align-items: center; gap: 6px; }
+    .count-field label { flex: 0 0 auto; margin: 0; color: var(--muted); font-size: .62rem; }
+    .count-field input { flex: 1; width: 0; height: 34px; }
+    .pita-field { min-width: 0; }
+    .pita-value { margin-left: auto; color: var(--accent); font: 600 .72rem "JetBrains Mono", monospace; white-space: nowrap; }
+    input[type="range"] {
+      height: 22px;
+      margin: 8px 0 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+    input[type="range"]:focus { border-color: transparent; box-shadow: none; }
+    input[type="range"]:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+    .pita-ticks { position: relative; height: 6px; margin: 0 8px; }
+    .pita-ticks span { position: absolute; top: 0; width: 2px; height: 6px; border-radius: 1px; background: var(--muted); transform: translateX(-50%); }
+    .pita-ticks span:nth-child(1) { left: 20%; }
+    .pita-ticks span:nth-child(2) { left: 40%; }
+    .pita-ticks span:nth-child(3) { left: 60%; }
+    .pita-ticks span:nth-child(4) { left: 80%; }
+    .pita-ticks span:nth-child(5) { left: 100%; }
+    .pita-scale { display: flex; justify-content: space-between; margin: 3px 8px 0; color: #cbd5e1; font-size: .72rem; font-weight: 800; }
+    .quote-card { position: sticky; top: 16px; padding: 0; overflow: hidden; }
+    .quote-header { padding: 19px 20px; border-bottom: 1px solid var(--card-border); }
+    .quote-header-row { display: flex; justify-content: space-between; align-items: center; }
+    .quote-chip { padding: 4px 8px; border-radius: 5px; background: rgba(245, 158, 11, .14); color: var(--accent); font-size: .64rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+    .quote-body { padding: 18px 20px 20px; }
+    .quote-line { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 12px; color: #cbd5e1; font-size: .78rem; }
+    .quote-line span:last-child { color: var(--text); font: 600 .77rem "JetBrains Mono", monospace; text-align: right; }
+    .quote-line.subtle { color: var(--muted); font-size: .7rem; }
+    .quote-divider { height: 1px; margin: 16px 0; background: var(--card-border); }
+    .total-label { color: var(--muted); font-size: .69rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+    .total-value { margin-top: 3px; color: var(--accent); font: 700 2rem "JetBrains Mono", monospace; letter-spacing: -.06em; }
+    .unit-price { margin-top: 4px; color: var(--muted); font-size: .74rem; }
+    .quote-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 18px; }
+    .button {
+      min-height: 39px;
+      padding: 8px 10px;
+      border: 1px solid var(--card-border);
+      border-radius: 7px;
+      background: #253347;
+      color: #e2e8f0;
+      font-size: .75rem;
+      font-weight: 700;
+    }
+    .button:hover { border-color: #64748b; background: #2b3b52; }
+    .button.primary { border-color: var(--accent); background: var(--accent); color: #111827; }
+    .button.primary:hover { background: var(--accent-hover); }
+    details.settings { margin-top: 16px; }
+    details.settings summary { color: var(--muted); cursor: pointer; font-size: .74rem; font-weight: 700; }
+    .settings-content { margin-top: 14px; }
+    .settings-note { margin: 0 0 12px; color: var(--muted); font-size: .7rem; }
+    .settings-group-title { margin: 16px 0 8px; color: #cbd5e1; font-size: .72rem; font-weight: 800; }
+    .stock-table-wrap { overflow-x: auto; }
+    .stock-table { width: 100%; min-width: 570px; border-collapse: separate; border-spacing: 0 5px; }
+    .stock-table th { padding: 0 5px 3px; color: var(--muted); font-size: .61rem; font-weight: 700; text-align: left; }
+    .stock-table td { padding: 0 3px; }
+    .stock-table input, .stock-table select { height: 33px; padding: 5px 6px; font-size: .69rem; }
+    .stock-table input[type="number"] { font-size: .68rem; }
+    .stock-table .remove-stock { width: 31px; height: 31px; border: 0; border-radius: 6px; background: rgba(239, 68, 68, .12); color: #fca5a5; font-size: 1rem; }
+    .settings-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
+    .settings-actions .button { min-height: 33px; font-size: .68rem; }
+    .rate-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .rate-grid .field label { font-size: .66rem; }
+    .footer-note { margin-top: 15px; color: var(--muted); font-size: .68rem; }
+    .hidden-file { display: none; }
+    @media (max-width: 800px) {
+      main { padding-top: 24px; }
+      .layout { grid-template-columns: 1fr; }
+      .form-column { grid-row: 2; }
+      .quote-column { grid-row: 1; }
+      .quote-card { position: static; }
+      .demo-note { max-width: none; }
+    }
+    @media (max-width: 520px) {
+      .topbar { gap: 8px; padding-right: 14px; padding-left: 14px; }
+      main { padding: 19px 12px 40px; }
+      .card { padding: 16px; }
+      .grid.three { grid-template-columns: 1fr; }
+      .dimensions-row { gap: 7px; }
+      .dimensions-row input { padding: 7px 6px; }
+      .dimension-unit { display: grid; gap: 4px; }
+      .unit-button { min-width: 42px; padding: 0 7px; }
+      .quote-card { padding: 0; }
+      .brand { gap: 6px; }
+      .brand-logo { width: 86px; height: 34px; }
+      .brand-tag { display: none; }
+      .draft-status { font-size: .68rem; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img class="brand-logo" src="pinner-logo.png" alt="Pinner Machine Shop">
+      <div class="brand-name">Billet Billy</div>
+      <span class="brand-tag">Shop quote</span>
+    </div>
+    <div class="draft-status">Draft saved in this browser</div>
+  </header>
+
+  <main>
+    <div class="layout">
+      <div class="form-column">
+        <section class="card" aria-labelledby="part-heading">
+          <div class="section-heading"><span class="section-number">01</span><h2 id="part-heading">Part &amp; order</h2></div>
+          <div class="grid">
+            <div class="field">
+              <label for="customer">Customer <span class="optional">optional</span></label>
+              <input id="customer" type="text" placeholder="Customer name">
+            </div>
+            <div class="field">
+              <label for="partName">Part name</label>
+              <input id="partName" type="text" placeholder="e.g. Clamp block">
+            </div>
+            <div class="field">
+              <label for="quantity">Quantity</label>
+              <input id="quantity" type="number" min="1" step="1" value="1" inputmode="numeric">
+            </div>
+            <div class="field">
+              <label for="material">Material</label>
+              <select id="material"></select>
+            </div>
+          </div>
+        </section>
+
+        <section class="card" aria-labelledby="dimensions-heading">
+          <div class="section-heading"><span class="section-number">02</span><h2 id="dimensions-heading">Finished dimensions</h2></div>
+          <div class="dimensions-row">
+            <div class="field">
+              <label for="length">Length</label>
+              <input id="length" type="number" min="0" step="any" placeholder="0.00" inputmode="decimal">
+            </div>
+            <div class="field">
+              <label for="width">Width</label>
+              <input id="width" type="number" min="0" step="any" placeholder="0.00" inputmode="decimal">
+            </div>
+            <div class="field">
+              <label for="thickness">Thickness</label>
+              <input id="thickness" type="number" min="0" step="any" placeholder="0.00" inputmode="decimal">
+            </div>
+            <div class="dimension-unit" role="group" aria-label="Dimension units">
+              <button class="unit-button" type="button" data-unit="in" aria-pressed="true">IN</button>
+              <button class="unit-button" type="button" data-unit="mm" aria-pressed="false">MM</button>
+            </div>
+          </div>
+          <p class="hint">Enter finished-part size. Add machining allowance below if your shop needs extra stock around each side.</p>
+          <div class="grid" style="margin-top:13px">
+            <div class="field">
+              <label for="allowance">Allowance per side <span class="optional">same units</span></label>
+              <input id="allowance" type="number" min="0" step="any" value="0" inputmode="decimal">
+            </div>
+            <div class="field">
+              <label for="stockSelect">Stock blank</label>
+              <select id="stockSelect" aria-describedby="stockHelp"></select>
+            </div>
+          </div>
+          <div id="stockResult" class="stock-result" aria-live="polite"></div>
+          <p id="stockHelp" class="hint">The recommended option is the lowest-priced blank that fits in any orientation.</p>
+        </section>
+
+        <section class="card" aria-labelledby="features-heading">
+          <div class="section-heading"><span class="section-number">03</span><h2 id="features-heading">Machining features</h2></div>
+          <div class="feature-list">
+            <div class="feature-row">
+              <label class="feature-name" for="holesEnabled"><input id="holesEnabled" type="checkbox"><span>Drilled holes<small>Standard drilled features</small></span></label>
+              <div id="holesCountWrap" class="count-field"><label for="holesCount">Qty</label><input id="holesCount" type="number" min="1" step="1" value="1" inputmode="numeric"></div>
+            </div>
+            <div class="feature-row">
+              <label class="feature-name" for="threadsEnabled"><input id="threadsEnabled" type="checkbox"><span>Threaded holes<small>Tap size / spec can be added to notes</small></span></label>
+              <div id="threadsCountWrap" class="count-field"><label for="threadsCount">Qty</label><input id="threadsCount" type="number" min="1" step="1" value="1" inputmode="numeric"></div>
+            </div>
+            <div class="feature-row">
+              <label class="feature-name" for="hexEnabled"><input id="hexEnabled" type="checkbox"><span>Hex sockets<small>Internal hex / socket features</small></span></label>
+              <div id="hexCountWrap" class="count-field"><label for="hexCount">Qty</label><input id="hexCount" type="number" min="1" step="1" value="1" inputmode="numeric"></div>
+            </div>
+            <div class="feature-row">
+              <label class="feature-name" for="externalThreadsEnabled"><input id="externalThreadsEnabled" type="checkbox"><span>External threads<small>Threaded outer features</small></span></label>
+              <div id="externalThreadsCountWrap" class="count-field"><label for="externalThreadsCount">Qty</label><input id="externalThreadsCount" type="number" min="1" step="1" value="1" inputmode="numeric" aria-label="Quantity of external threads"></div>
+            </div>
+            <div class="feature-row">
+              <label class="feature-name" for="secondOpsEnabled"><input id="secondOpsEnabled" type="checkbox"><span>Second operations<small>Additional machining operations</small></span></label>
+              <div id="secondOpsCountWrap" class="count-field"><label for="secondOpsCount">Qty</label><input id="secondOpsCount" type="number" min="1" step="1" value="1" inputmode="numeric" aria-label="Quantity of second operations"></div>
+            </div>
+          </div>
+          <div class="field" style="margin-top:13px">
+            <label for="notes">Notes <span class="optional">tolerances, thread callouts, finish</span></label>
+            <input id="notes" type="text" placeholder="e.g. 4x M6 tapped, deburr all edges">
+          </div>
+        </section>
+
+        <section class="card" aria-labelledby="pita-heading">
+          <div class="section-heading">
+            <span class="section-number">04</span>
+            <h2 id="pita-heading">PITA Factor</h2>
+            <output id="pitaFactorValue" class="pita-value" for="pitaFactor">+0%</output>
+          </div>
+          <div class="pita-field">
+            <input id="pitaFactor" type="range" min="0" max="5" step="1" value="0" aria-labelledby="pita-heading" aria-describedby="pitaFactorHelp">
+            <div class="pita-ticks" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+            <div class="pita-scale" aria-hidden="true"><span>EZ</span><span>PITA</span></div>
+            <p id="pitaFactorHelp" class="hint">Adds 3% per level, up to 15%, to the estimate.</p>
+          </div>
+        </section>
+      </div>
+
+      <div class="quote-column">
+        <aside class="card quote-card" aria-labelledby="quote-heading">
+          <div class="quote-header">
+            <div class="quote-header-row"><h2 id="quote-heading">Quote estimate</h2><span class="quote-chip">Draft</span></div>
+          </div>
+          <div class="quote-body">
+            <div class="quote-line"><span>Stock material</span><span id="materialCost">$0.00</span></div>
+            <div class="quote-line"><span>Machining labor</span><span id="laborCost">$0.00</span></div>
+            <div class="quote-line"><span id="pitaLineLabel">PITA adjustment (0%)</span><span id="pitaCost">$0.00</span></div>
+            <div class="quote-line subtle"><span id="laborDetail">Setup + cycle time</span><span id="laborMinutes">0 min</span></div>
+            <div class="quote-line"><span>Quantity</span><span id="quoteQuantity">1 pc</span></div>
+            <div class="quote-divider"></div>
+            <div class="total-label">Estimated total</div>
+            <div id="totalCost" class="total-value" aria-live="polite">$0.00</div>
+            <div id="unitPrice" class="unit-price">Enter dimensions to get a stock match.</div>
+            <div class="quote-divider"></div>
+            <div class="quote-line subtle"><span>Estimate includes</span><span id="featureSummary">No features selected</span></div>
+            <div class="quote-actions">
+              <button id="copyQuote" class="button primary" type="button">Copy quote summary</button>
+              <button id="newQuote" class="button" type="button">New quote</button>
+            </div>
+            <details class="settings">
+              <summary>Stock &amp; rates</summary>
+              <div class="settings-content">
+                <p class="settings-note">Saved on this device for now. This catalog is structured to move to a shared Google Sheet later.</p>
+                <div class="settings-group-title">Stock catalog</div>
+                <div class="stock-table-wrap">
+                  <table class="stock-table">
+                    <thead><tr><th>Material / stock</th><th>Length</th><th>Width</th><th>Thick.</th><th>Unit</th><th>Price / blank</th><th></th></tr></thead>
+                    <tbody id="stockRows"></tbody>
+                  </table>
+                </div>
+                <div class="settings-actions">
+                  <button id="addStock" class="button" type="button">+ Add stock</button>
+                  <button id="exportCatalog" class="button" type="button">Export catalog CSV</button>
+                  <button id="importCatalog" class="button" type="button">Import catalog CSV</button>
+                  <input id="catalogFile" class="hidden-file" type="file" accept=".csv,text/csv">
+                </div>
+                <div class="settings-group-title">Shop estimate inputs</div>
+                <div class="rate-grid">
+                  <div class="field"><label for="hourlyRate">Shop rate ($ / hour)</label><input id="hourlyRate" type="number" min="0" step="any"></div>
+                  <div class="field"><label for="setupMinutes">Setup time (minutes / job)</label><input id="setupMinutes" type="number" min="0" step="1"></div>
+                  <div class="field"><label for="cycleMinutes">Base cycle time (minutes / part)</label><input id="cycleMinutes" type="number" min="0" step="1"></div>
+                  <div class="field"><label for="holeMinutes">Minutes / drilled hole</label><input id="holeMinutes" type="number" min="0" step="any"></div>
+                  <div class="field"><label for="threadMinutes">Minutes / threaded hole</label><input id="threadMinutes" type="number" min="0" step="any"></div>
+                  <div class="field"><label for="externalThreadMinutes">Minutes / external thread</label><input id="externalThreadMinutes" type="number" min="0" step="any"></div>
+                  <div class="field"><label for="hexMinutes">Minutes / hex socket</label><input id="hexMinutes" type="number" min="0" step="any"></div>
+                  <div class="field"><label for="secondOpMinutes">Minutes / second operation</label><input id="secondOpMinutes" type="number" min="0" step="any"></div>
+                </div>
+                <div class="settings-actions"><button id="resetConfig" class="button" type="button">Restore example data</button></div>
+                <p class="footer-note">Estimate = (stock blank price × quantity + shop rate × estimated labor hours) × (1 + PITA factor). The PITA factor adds 3% per level to the material and labor subtotal. One blank per part; scrap/reuse, finishing, tax, and special tooling are not included.</p>
+              </div>
+            </details>
+          </div>
+        </aside>
+        <div class="demo-note"><strong>Prototype data:</strong> example stock prices and shop rates are placeholders. Replace them in “Stock &amp; rates” before using a quote with a customer.</div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const CONFIG_KEY = "billetBillyConfigV1";
+    const QUOTE_KEY = "billetBillyQuoteV1";
+    const PITA_MAX = 5;
+    const PITA_RATE_PER_LEVEL = 0.03;
+    const DEFAULT_CONFIG = {
+      stock: [
+        { id: "al-1", material: "6061 Aluminum", length: 6, width: 2, thickness: 1, unit: "in", price: 18 },
+        { id: "al-2", material: "6061 Aluminum", length: 12, width: 2, thickness: 1, unit: "in", price: 31 },
+        { id: "steel-1", material: "1018 Steel", length: 6, width: 2, thickness: 1, unit: "in", price: 22 },
+        { id: "steel-2", material: "1018 Steel", length: 12, width: 2, thickness: 1, unit: "in", price: 39 },
+        { id: "ss-1", material: "304 Stainless", length: 6, width: 2, thickness: 1, unit: "in", price: 34 }
+      ],
+      rates: {
+        hourlyRate: 85, setupMinutes: 30, cycleMinutes: 20, holeMinutes: 3, threadMinutes: 8,
+        externalThreadMinutes: 8, hexMinutes: 6, secondOpMinutes: 20
+      }
+    };
+    const DEFAULT_QUOTE = {
+      customer: "", partName: "", quantity: 1, material: "6061 Aluminum",
+      length: "", width: "", thickness: "", unit: "in", allowance: 0, stockId: "",
+      holesEnabled: false, holesCount: 1, threadsEnabled: false, threadsCount: 1, pitaFactor: 0,
+      hexEnabled: false, hexCount: 1, externalThreadsEnabled: false, externalThreadsCount: 1,
+      secondOpsEnabled: false, secondOpsCount: 1, notes: ""
+    };
+    const clone = value => JSON.parse(JSON.stringify(value));
+    let config = loadConfig();
+    let quote = loadQuote();
+    let saveTimer;
+
+    function loadConfig() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(CONFIG_KEY));
+        if (saved && Array.isArray(saved.stock) && saved.rates) {
+          return {
+            stock: saved.stock.filter(item => item && typeof item.material === "string").map(item => ({ ...item })),
+            rates: { ...DEFAULT_CONFIG.rates, ...saved.rates }
+          };
+        }
+      } catch (error) {
+        console.warn("Could not load saved stock and rates.", error);
+      }
+      return clone(DEFAULT_CONFIG);
+    }
+
+    function loadQuote() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(QUOTE_KEY));
+        if (saved && typeof saved === "object") return { ...DEFAULT_QUOTE, ...saved };
+      } catch (error) {
+        console.warn("Could not load the saved draft quote.", error);
+      }
+      return clone(DEFAULT_QUOTE);
+    }
+
+    function persistConfig() {
+      localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+    }
+
+    function persistQuote() {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => localStorage.setItem(QUOTE_KEY, JSON.stringify(quote)), 100);
+    }
+
+    function numberOrZero(value) {
+      const number = Number(value);
+      return Number.isFinite(number) && number > 0 ? number : 0;
+    }
+
+    function money(value) {
+      return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number.isFinite(value) ? value : 0);
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, character => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      })[character]);
+    }
+
+    function convert(value, from, to) {
+      if (from === to) return value;
+      return from === "in" ? value * 25.4 : value / 25.4;
+    }
+
+    function stockSize(stock, unit) {
+      return [stock.length, stock.width, stock.thickness].map(value => convert(numberOrZero(value), stock.unit || "in", unit));
+    }
+
+    function findFittingStock() {
+      const material = document.getElementById("material").value;
+      const dims = [
+        numberOrZero(document.getElementById("length").value),
+        numberOrZero(document.getElementById("width").value),
+        numberOrZero(document.getElementById("thickness").value)
+      ];
+      const allowance = numberOrZero(document.getElementById("allowance").value) * 2;
+      if (!dims.every(value => value > 0)) return [];
+      const required = dims.map(value => value + allowance).sort((a, b) => a - b);
+      return config.stock
+        .filter(stock => stock.material === material && numberOrZero(stock.price) >= 0)
+        .map(stock => {
+          const available = stockSize(stock, quote.unit).sort((a, b) => a - b);
+          return { stock, fits: required.every((size, index) => available[index] + 1e-8 >= size) };
+        })
+        .filter(item => item.fits)
+        .map(item => item.stock)
+        .sort((a, b) => numberOrZero(a.price) - numberOrZero(b.price) || a.length * a.width * a.thickness - b.length * b.width * b.thickness);
+    }
+
+    function formatStock(stock) {
+      if (!stock) return "";
+      const dimensions = [stock.length, stock.width, stock.thickness].join(" × ");
+      return `${stock.material} · ${dimensions} ${stock.unit || "in"}`;
+    }
+
+    function renderMaterials() {
+      const select = document.getElementById("material");
+      const materials = [...new Set(config.stock.map(stock => stock.material.trim()).filter(Boolean))].sort();
+      const selected = materials.includes(quote.material) ? quote.material : materials[0] || "";
+      quote.material = selected;
+      select.innerHTML = materials.length
+        ? materials.map(material => `<option value="${escapeHtml(material)}">${escapeHtml(material)}</option>`).join("")
+        : '<option value="">Add stock in settings</option>';
+      select.value = selected;
+    }
+
+    function renderStockOptions() {
+      const select = document.getElementById("stockSelect");
+      const fits = findFittingStock();
+      const selected = fits.find(stock => stock.id === quote.stockId) || fits[0] || null;
+      quote.stockId = selected ? selected.id : "";
+      select.innerHTML = fits.length
+        ? fits.map(stock => `<option value="${escapeHtml(stock.id)}">${escapeHtml(formatStock(stock))} — ${money(numberOrZero(stock.price))}</option>`).join("")
+        : '<option value="">No matching blank</option>';
+      if (selected) select.value = selected.id;
+      const hasPartDimensions = ["length", "width", "thickness"]
+        .every(id => numberOrZero(document.getElementById(id).value) > 0);
+      const result = document.getElementById("stockResult");
+      result.classList.toggle("no-fit", !selected && hasPartDimensions);
+      result.innerHTML = selected
+        ? `<div><div class="stock-result-title">Best price that fits</div><div class="stock-result-name">${escapeHtml(formatStock(selected))}</div></div><div class="stock-result-price">${money(numberOrZero(selected.price))} / blank</div>`
+        : `<div><div class="stock-result-title">Stock match</div><div class="stock-result-name">${hasPartDimensions ? "No stock blank fits these dimensions." : "Enter dimensions to find a stock blank."}</div></div>`;
+      return selected;
+    }
+
+    function renderQuote() {
+      const stock = renderStockOptions();
+      const hasPartDimensions = ["length", "width", "thickness"]
+        .every(id => numberOrZero(document.getElementById(id).value) > 0);
+      const quoteReady = Boolean(stock && hasPartDimensions);
+      const quantity = Math.max(1, Math.floor(numberOrZero(quote.quantity) || 1));
+      const featureMinutes =
+        (quote.holesEnabled ? numberOrZero(quote.holesCount) * numberOrZero(config.rates.holeMinutes) : 0) +
+        (quote.threadsEnabled ? numberOrZero(quote.threadsCount) * numberOrZero(config.rates.threadMinutes) : 0) +
+        (quote.hexEnabled ? numberOrZero(quote.hexCount) * numberOrZero(config.rates.hexMinutes) : 0) +
+        (quote.externalThreadsEnabled ? numberOrZero(quote.externalThreadsCount) * numberOrZero(config.rates.externalThreadMinutes) : 0) +
+        (quote.secondOpsEnabled ? numberOrZero(quote.secondOpsCount) * numberOrZero(config.rates.secondOpMinutes) : 0);
+      const cycle = numberOrZero(config.rates.cycleMinutes) + featureMinutes;
+      const totalMinutes = numberOrZero(config.rates.setupMinutes) + cycle * quantity;
+      const materialCost = quoteReady ? numberOrZero(stock.price) * quantity : 0;
+      const laborCost = quoteReady ? totalMinutes * numberOrZero(config.rates.hourlyRate) / 60 : 0;
+      const pitaFactor = Math.min(PITA_MAX, Math.round(numberOrZero(quote.pitaFactor)));
+      quote.pitaFactor = pitaFactor;
+      const pitaRate = pitaFactor * PITA_RATE_PER_LEVEL;
+      const pitaPercent = Math.round(pitaRate * 100);
+      const subtotal = materialCost + laborCost;
+      const pitaCost = quoteReady ? subtotal * pitaRate : 0;
+      const total = subtotal + pitaCost;
+      document.getElementById("pitaFactor").value = pitaFactor;
+      document.getElementById("pitaFactor").setAttribute("aria-valuetext", `Level ${pitaFactor} of ${PITA_MAX}; adds ${pitaPercent} percent`);
+      document.getElementById("pitaFactorValue").textContent = `+${pitaPercent}%`;
+      document.getElementById("pitaLineLabel").textContent = `PITA adjustment (${pitaPercent}%)`;
+      document.getElementById("materialCost").textContent = money(materialCost);
+      document.getElementById("laborCost").textContent = money(laborCost);
+      document.getElementById("pitaCost").textContent = money(pitaCost);
+      document.getElementById("laborMinutes").textContent = `${totalMinutes.toFixed(0)} min`;
+      document.getElementById("quoteQuantity").textContent = `${quantity} ${quantity === 1 ? "pc" : "pcs"}`;
+      document.getElementById("totalCost").textContent = quoteReady ? money(total) : "—";
+      document.getElementById("unitPrice").textContent = quoteReady
+        ? `Estimated ${money(total / quantity)} per part`
+        : hasPartDimensions ? "No fitting stock blank. Update the dimensions or catalog." : "Enter dimensions to get a stock match.";
+      const selectedFeatures = [];
+      if (quote.holesEnabled) selectedFeatures.push(`${numberOrZero(quote.holesCount)} holes`);
+      if (quote.threadsEnabled) selectedFeatures.push(`${numberOrZero(quote.threadsCount)} threaded`);
+      if (quote.hexEnabled) selectedFeatures.push(`${numberOrZero(quote.hexCount)} hex`);
+      if (quote.externalThreadsEnabled) selectedFeatures.push(`${numberOrZero(quote.externalThreadsCount)} external threads`);
+      if (quote.secondOpsEnabled) selectedFeatures.push(`${numberOrZero(quote.secondOpsCount)} second operations`);
+      document.getElementById("featureSummary").textContent = selectedFeatures.join(", ") || "No features selected";
+      document.getElementById("laborDetail").textContent = `Setup + ${cycle.toFixed(0)} min / part`;
+      persistQuote();
+    }
+
+    function setInputValue(id, value) {
+      document.getElementById(id).value = value == null ? "" : value;
+    }
+
+    function applyQuoteToForm() {
+      ["customer", "partName", "quantity", "length", "width", "thickness", "allowance", "notes",
+        "holesCount", "threadsCount", "hexCount", "externalThreadsCount", "secondOpsCount", "pitaFactor"].forEach(key => setInputValue(key, quote[key]));
+      ["holesEnabled", "threadsEnabled", "hexEnabled", "externalThreadsEnabled", "secondOpsEnabled"].forEach(key => {
+        document.getElementById(key).checked = Boolean(quote[key]);
+      });
+      document.querySelectorAll(".unit-button").forEach(button => {
+        button.setAttribute("aria-pressed", String(button.dataset.unit === quote.unit));
+      });
+      renderMaterials();
+      renderFeatureRows();
+      renderQuote();
+    }
+
+    function renderFeatureRows() {
+      [["holesEnabled", "holesCountWrap"], ["threadsEnabled", "threadsCountWrap"], ["hexEnabled", "hexCountWrap"],
+        ["externalThreadsEnabled", "externalThreadsCountWrap"], ["secondOpsEnabled", "secondOpsCountWrap"]]
+        .forEach(([enabled, wrapper]) => document.getElementById(wrapper).classList.toggle("visible", quote[enabled]));
+    }
+
+    function renderSettings() {
+      const tbody = document.getElementById("stockRows");
+      tbody.innerHTML = config.stock.map((stock, index) => `
+        <tr data-stock-index="${index}">
+          <td><input data-key="material" aria-label="Stock material" value="${escapeHtml(stock.material)}"></td>
+          <td><input data-key="length" aria-label="Stock length" type="number" min="0" step="any" value="${escapeHtml(stock.length)}"></td>
+          <td><input data-key="width" aria-label="Stock width" type="number" min="0" step="any" value="${escapeHtml(stock.width)}"></td>
+          <td><input data-key="thickness" aria-label="Stock thickness" type="number" min="0" step="any" value="${escapeHtml(stock.thickness)}"></td>
+          <td><select data-key="unit" aria-label="Stock unit"><option value="in" ${stock.unit === "in" ? "selected" : ""}>in</option><option value="mm" ${stock.unit === "mm" ? "selected" : ""}>mm</option></select></td>
+          <td><input data-key="price" aria-label="Price per stock blank" type="number" min="0" step="any" value="${escapeHtml(stock.price)}"></td>
+          <td><button class="remove-stock" type="button" aria-label="Remove stock row">×</button></td>
+        </tr>`).join("");
+      Object.keys(config.rates).forEach(key => setInputValue(key, config.rates[key]));
+      renderMaterials();
+      renderQuote();
+    }
+
+    function bindQuoteField(id, key, coerce) {
+      const element = document.getElementById(id);
+      element.addEventListener("input", () => {
+        quote[key] = coerce ? coerce(element.value) : element.value;
+        if (key === "quantity") quote.quantity = Math.max(1, Math.floor(numberOrZero(element.value) || 1));
+        if (key === "material") quote.stockId = "";
+        renderQuote();
+      });
+      element.addEventListener("change", () => {
+        quote[key] = coerce ? coerce(element.value) : element.value;
+        if (key === "material") quote.stockId = "";
+        renderQuote();
+      });
+    }
+
+    ["customer", "partName", "quantity", "length", "width", "thickness", "allowance", "notes",
+      "holesCount", "threadsCount", "hexCount", "externalThreadsCount", "secondOpsCount"].forEach(id => bindQuoteField(id, id));
+    bindQuoteField("pitaFactor", "pitaFactor", Number);
+    bindQuoteField("material", "material");
+    ["holesEnabled", "threadsEnabled", "hexEnabled", "externalThreadsEnabled", "secondOpsEnabled"].forEach(id => {
+      document.getElementById(id).addEventListener("change", () => {
+        quote[id] = document.getElementById(id).checked;
+        renderFeatureRows();
+        renderQuote();
+      });
+    });
+    document.getElementById("stockSelect").addEventListener("change", event => {
+      quote.stockId = event.target.value;
+      renderQuote();
+    });
+    document.querySelectorAll(".unit-button").forEach(button => {
+      button.addEventListener("click", () => {
+        const nextUnit = button.dataset.unit;
+        if (nextUnit !== quote.unit) {
+          ["length", "width", "thickness", "allowance"].forEach(key => {
+            if (quote[key] === "" || quote[key] == null) return;
+            const converted = convert(numberOrZero(quote[key]), quote.unit, nextUnit);
+            quote[key] = Number(converted.toFixed(4));
+            document.getElementById(key).value = quote[key];
+          });
+        }
+        quote.unit = nextUnit;
+        document.querySelectorAll(".unit-button").forEach(item => item.setAttribute("aria-pressed", String(item === button)));
+        renderQuote();
+      });
+    });
+
+    document.getElementById("stockRows").addEventListener("change", event => {
+      const input = event.target.closest("[data-key]");
+      if (!input) return;
+      const row = input.closest("[data-stock-index]");
+      const stock = config.stock[Number(row.dataset.stockIndex)];
+      const key = input.dataset.key;
+      stock[key] = key === "material" || key === "unit" ? input.value : numberOrZero(input.value);
+      persistConfig();
+      renderMaterials();
+      renderQuote();
+    });
+    document.getElementById("stockRows").addEventListener("click", event => {
+      const button = event.target.closest(".remove-stock");
+      if (!button) return;
+      const row = button.closest("[data-stock-index]");
+      config.stock.splice(Number(row.dataset.stockIndex), 1);
+      quote.stockId = "";
+      persistConfig();
+      renderSettings();
+    });
+
+    Object.keys(config.rates).forEach(key => {
+      document.getElementById(key).addEventListener("input", event => {
+        config.rates[key] = numberOrZero(event.target.value);
+        persistConfig();
+        renderQuote();
+      });
+    });
+    document.getElementById("addStock").addEventListener("click", () => {
+      config.stock.push({
+        id: `stock-${Date.now()}`, material: "New material", length: 6, width: 2,
+        thickness: 1, unit: "in", price: 0
+      });
+      persistConfig();
+      renderSettings();
+      document.querySelector(".settings").open = true;
+      document.getElementById("stockRows").lastElementChild.querySelector('[data-key="material"]').focus();
+    });
+    document.getElementById("resetConfig").addEventListener("click", () => {
+      config = clone(DEFAULT_CONFIG);
+      quote.stockId = "";
+      persistConfig();
+      renderSettings();
+    });
+
+    function csvCell(value) {
+      const text = String(value == null ? "" : value);
+      return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    }
+
+    function parseCsv(text) {
+      const rows = [];
+      let row = [], cell = "", quoted = false;
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (quoted) {
+          if (char === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+          else if (char === '"') quoted = false;
+          else cell += char;
+        } else if (char === '"' && cell.length === 0) quoted = true;
+        else if (char === ",") { row.push(cell); cell = ""; }
+        else if (char === "\n" || char === "\r") {
+          if (char === "\r" && text[i + 1] === "\n") i++;
+          row.push(cell); rows.push(row); row = []; cell = "";
+        } else cell += char;
+      }
+      if (cell.length || row.length) { row.push(cell); rows.push(row); }
+      return rows;
+    }
+
+    document.getElementById("exportCatalog").addEventListener("click", () => {
+      const header = ["material", "length", "width", "thickness", "unit", "price"];
+      const lines = [header.join(","), ...config.stock.map(stock => header.map(key => csvCell(stock[key])).join(","))];
+      const blob = new Blob([lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "billet-billy-stock.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+    document.getElementById("importCatalog").addEventListener("click", () => document.getElementById("catalogFile").click());
+    document.getElementById("catalogFile").addEventListener("change", async event => {
+      const file = event.target.files[0];
+      if (!file) return;
+      try {
+        const rows = parseCsv(await file.text());
+        const headers = rows.shift().map(header => header.trim().toLowerCase());
+        const required = ["material", "length", "width", "thickness", "unit", "price"];
+        if (!required.every(header => headers.includes(header))) throw new Error("CSV needs columns: material, length, width, thickness, unit, price.");
+        const imported = rows.filter(row => row.some(value => value.trim())).map(row => {
+          const data = Object.fromEntries(headers.map((header, index) => [header, row[index] || ""]));
+          const stock = {
+            id: `stock-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            material: data.material.trim(),
+            length: Number(data.length), width: Number(data.width), thickness: Number(data.thickness),
+            unit: data.unit.trim().toLowerCase(), price: Number(data.price)
+          };
+          if (!stock.material || ![stock.length, stock.width, stock.thickness, stock.price].every(Number.isFinite) ||
+              [stock.length, stock.width, stock.thickness, stock.price].some(value => value < 0) ||
+              !["in", "mm"].includes(stock.unit)) {
+            throw new Error("Each row needs a material, non-negative dimensions and price, and unit 'in' or 'mm'.");
+          }
+          return stock;
+        });
+        if (!imported.length) throw new Error("The CSV has no stock rows to import.");
+        config.stock = imported;
+        quote.stockId = "";
+        persistConfig();
+        renderSettings();
+      } catch (error) {
+        alert(`Could not import catalog: ${error.message}`);
+      } finally {
+        event.target.value = "";
+      }
+    });
+
+    function quoteSummary() {
+      const stock = config.stock.find(item => item.id === quote.stockId);
+      const quantity = Math.max(1, Math.floor(numberOrZero(quote.quantity) || 1));
+      const pitaFactor = Math.min(PITA_MAX, Math.max(0, numberOrZero(quote.pitaFactor)));
+      const pitaPercent = Math.round(pitaFactor * PITA_RATE_PER_LEVEL * 100);
+      const features = [];
+      if (quote.holesEnabled) features.push(`${quote.holesCount} drilled hole(s)`);
+      if (quote.threadsEnabled) features.push(`${quote.threadsCount} threaded hole(s)`);
+      if (quote.hexEnabled) features.push(`${quote.hexCount} hex socket(s)`);
+      if (quote.externalThreadsEnabled) features.push(`${quote.externalThreadsCount} external thread(s)`);
+      if (quote.secondOpsEnabled) features.push(`${quote.secondOpsCount} second operation(s)`);
+      const lines = [
+        `Quote estimate${quote.customer ? ` for ${quote.customer}` : ""}`,
+        `Part: ${quote.partName || "Unnamed part"} | Quantity: ${quantity}`,
+        `Finished size: ${quote.length || "?"} × ${quote.width || "?"} × ${quote.thickness || "?"} ${quote.unit}`,
+        `Material: ${quote.material || "Not selected"}`,
+        `Stock: ${stock ? `${formatStock(stock)} at ${money(numberOrZero(stock.price))} per blank` : "No matching stock selected"}`,
+        `Features: ${features.join(", ") || "None specified"}`,
+        `PITA factor: ${pitaFactor}/${PITA_MAX} (+${pitaPercent}%)`,
+        `Notes: ${quote.notes || "None"}`,
+        `Estimated total: ${document.getElementById("totalCost").textContent} (${document.getElementById("unitPrice").textContent})`,
+        "Estimate only; verify material, tolerances, finish, and shop pricing before quoting."
+      ];
+      return lines.join("\n");
+    }
+
+    document.getElementById("copyQuote").addEventListener("click", async event => {
+      try {
+        await navigator.clipboard.writeText(quoteSummary());
+        event.target.textContent = "Copied!";
+        setTimeout(() => { event.target.textContent = "Copy quote summary"; }, 1500);
+      } catch (error) {
+        window.prompt("Copy quote summary:", quoteSummary());
+      }
+    });
+    document.getElementById("newQuote").addEventListener("click", () => {
+      if (!window.confirm("Start a new quote? This clears the current draft on this device.")) return;
+      quote = clone(DEFAULT_QUOTE);
+      localStorage.removeItem(QUOTE_KEY);
+      applyQuoteToForm();
+    });
+
+    renderSettings();
+    applyQuoteToForm();
+  </script>
+</body>
+</html>
