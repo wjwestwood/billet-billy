@@ -215,12 +215,19 @@
     .quote-body { padding: 18px 20px 20px; }
     .part-image-section { margin-bottom: 18px; }
     .part-image-label { display: block; margin-bottom: 7px; color: #cbd5e1; font-size: .73rem; font-weight: 700; }
-    .part-image-paste { display: grid; min-height: 82px; place-items: center; padding: 10px; border: 1px dashed #64748b; border-radius: 8px; background: rgba(15, 23, 42, .45); color: var(--muted); font-size: .72rem; text-align: center; cursor: text; }
-    .part-image-paste:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+    .part-image-paste { position: relative; display: grid; min-height: 92px; place-items: center; padding: 10px; border: 1px dashed #64748b; border-radius: 8px; background: rgba(15, 23, 42, .45); color: #cbd5e1; font-size: .72rem; text-align: center; cursor: pointer; transition: border-color .15s, background .15s, box-shadow .15s; }
+    .part-image-paste:focus { border-color: var(--primary); background: rgba(56, 189, 248, .14); box-shadow: 0 0 0 3px rgba(56, 189, 248, .12); outline: 2px solid var(--primary); outline-offset: 2px; }
+    .part-image-prompt { display: grid; justify-items: center; gap: 7px; }
+    .part-image-prompt[hidden] { display: none; }
+    .part-image-ready { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border: 1px solid rgba(245, 158, 11, .4); border-radius: 999px; background: rgba(245, 158, 11, .14); color: #fbbf24; font-size: .62rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+    .part-image-ready::before { width: 7px; height: 7px; border-radius: 50%; background: currentColor; content: ""; }
     .part-image-preview { display: block; max-width: 100%; max-height: 180px; border-radius: 5px; object-fit: contain; }
     .part-image-preview[hidden] { display: none; }
-    .part-image-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 7px; }
-    .part-image-actions .button { min-height: 31px; font-size: .68rem; }
+    .part-image-remove { position: absolute; top: 6px; right: 6px; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 1px solid #64748b; border-radius: 50%; background: rgba(15, 23, 42, .92); color: #fff; cursor: pointer; }
+    .part-image-remove svg { display: block; width: 12px; height: 12px; }
+    .part-image-remove:hover { border-color: var(--danger); background: #7f1d1d; }
+    .part-image-remove:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+    .part-image-remove[hidden] { display: none; }
     .part-image-status { margin: 6px 0 0; color: var(--muted); font-size: .68rem; }
     .quote-line { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 12px; color: #cbd5e1; font-size: .78rem; }
     .quote-line span:last-child { color: var(--text); font: 600 .77rem "JetBrains Mono", monospace; text-align: right; }
@@ -445,11 +452,9 @@
             <section class="part-image-section" aria-labelledby="partImageHeading">
               <span id="partImageHeading" class="part-image-label">Part screenshot</span>
               <div id="partImagePaste" class="part-image-paste" tabindex="0" aria-label="Paste a part screenshot here">
-                <span id="partImagePrompt">Paste a screenshot of the part<br>Click here, then paste (Ctrl+V; max 1.5 MB)</span>
+                <span id="partImagePrompt" class="part-image-prompt"><span class="part-image-ready">Click to paste</span><span>Allow clipboard access if prompted, or press Ctrl+V (max 1.5 MB)</span></span>
                 <img id="partImagePreview" class="part-image-preview" alt="Pasted screenshot of the part" hidden>
-              </div>
-              <div class="part-image-actions">
-                <button id="removePartImage" class="button" type="button" hidden>Remove screenshot</button>
+                <button id="removePartImage" class="part-image-remove" type="button" aria-label="Remove screenshot" title="Remove screenshot" hidden><svg viewBox="0 0 12 12" aria-hidden="true"><path d="m3 3 6 6m0-6-6 6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"></path></svg></button>
               </div>
               <p id="partImageStatus" class="part-image-status" role="status" aria-live="polite"></p>
             </section>
@@ -550,6 +555,7 @@
   <script>
     const CONFIG_KEY = "billetBillyConfigV1";
     const QUOTE_KEY = "billetBillyQuoteV1";
+    const SUPPORTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
     const PITA_MAX = 5;
     const PITA_RATE_PER_LEVEL = 0.03;
     const DEFAULT_CONFIG = {
@@ -627,10 +633,12 @@
     function renderPartImage() {
       const hasImage = Boolean(quote.partImage);
       const preview = document.getElementById("partImagePreview");
+      const pasteArea = document.getElementById("partImagePaste");
       preview.hidden = !hasImage;
       if (hasImage) preview.src = quote.partImage;
       else preview.removeAttribute("src");
       document.getElementById("partImagePrompt").hidden = hasImage;
+      pasteArea.classList.toggle("has-image", hasImage);
       document.getElementById("removePartImage").hidden = !hasImage;
     }
 
@@ -644,6 +652,53 @@
         reader.addEventListener("error", () => reject(new Error("The screenshot could not be read.")));
         reader.readAsDataURL(file);
       });
+    }
+
+    async function addPastedImage(imageFile) {
+      const status = document.getElementById("partImageStatus");
+      if (!imageFile) {
+        status.textContent = "The pasted image could not be read.";
+        return;
+      }
+      if (!SUPPORTED_IMAGE_TYPES.includes(imageFile.type)) {
+        status.textContent = "Paste a PNG, JPEG, WebP, or GIF screenshot.";
+        return;
+      }
+      if (imageFile.size > 1.5 * 1024 * 1024) {
+        status.textContent = "Screenshot must be 1.5 MB or smaller.";
+        return;
+      }
+      try {
+        quote.partImage = await readImageAsDataUrl(imageFile);
+        renderPartImage();
+        status.textContent = "Screenshot added to this estimate.";
+        persistQuote();
+      } catch (error) {
+        status.textContent = error.message;
+      }
+    }
+
+    async function pasteImageFromClipboard() {
+      const status = document.getElementById("partImageStatus");
+      status.textContent = "";
+      if (!navigator.clipboard || typeof navigator.clipboard.read !== "function") {
+        status.textContent = "Clipboard access is unavailable here. Press Ctrl+V to paste.";
+        return;
+      }
+      try {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          const imageType = item.types.find(type => SUPPORTED_IMAGE_TYPES.includes(type));
+          if (!imageType) continue;
+          const blob = await item.getType(imageType);
+          await addPastedImage(new File([blob], "screenshot", { type: imageType }));
+          return;
+        }
+        status.textContent = "No screenshot found in the clipboard. Copy one, then click again or press Ctrl+V.";
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        status.textContent = `Could not read the clipboard: ${reason}. Press Ctrl+V to paste instead.`;
+      }
     }
 
     function numberOrZero(value) {
@@ -1106,31 +1161,16 @@
       window.print();
     });
 
+    document.getElementById("partImagePaste").addEventListener("click", event => {
+      if (event.target.closest("#removePartImage")) return;
+      event.currentTarget.focus();
+      pasteImageFromClipboard();
+    });
     document.getElementById("partImagePaste").addEventListener("paste", async event => {
       const imageItem = [...event.clipboardData.items].find(item => item.type.startsWith("image/"));
       if (!imageItem) return;
       event.preventDefault();
-      const imageFile = imageItem.getAsFile();
-      if (!imageFile) {
-        document.getElementById("partImageStatus").textContent = "The pasted image could not be read.";
-        return;
-      }
-      if (!["image/png", "image/jpeg", "image/webp", "image/gif"].includes(imageFile.type)) {
-        document.getElementById("partImageStatus").textContent = "Paste a PNG, JPEG, WebP, or GIF screenshot.";
-        return;
-      }
-      if (imageFile.size > 1.5 * 1024 * 1024) {
-        document.getElementById("partImageStatus").textContent = "Screenshot must be 1.5 MB or smaller.";
-        return;
-      }
-      try {
-        quote.partImage = await readImageAsDataUrl(imageFile);
-        renderPartImage();
-        document.getElementById("partImageStatus").textContent = "Screenshot added to this estimate.";
-        persistQuote();
-      } catch (error) {
-        document.getElementById("partImageStatus").textContent = error.message;
-      }
+      await addPastedImage(imageItem.getAsFile());
     });
     document.getElementById("removePartImage").addEventListener("click", () => {
       quote.partImage = "";
