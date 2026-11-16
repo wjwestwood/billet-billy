@@ -305,9 +305,11 @@
       .print-title { text-align: right; }
       .print-title h1 { margin: 0; font-size: 21pt; letter-spacing: 0; }
       .print-title p { margin: 3px 0 0; color: #444; }
-      .print-part-image { display: block; max-width: 100%; max-height: 30mm; margin: 8px auto 0; object-fit: contain; }
+      .print-overview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; margin: 18px 0 24px; }
+      .print-overview:not(.has-image) { grid-template-columns: 1fr; }
+      .print-part-image { display: block; width: 100%; max-width: 100%; max-height: 90mm; margin: 0; object-fit: contain; }
       .print-part-image[hidden] { display: none; }
-      .print-meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin: 20px 0 24px; }
+      .print-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; align-content: start; margin: 0; }
       .print-meta span, .print-label { display: block; margin-bottom: 3px; color: #444; font-size: 8pt; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
       .print-meta strong { font-size: 11pt; }
       .print-document h2 { margin: 22px 0 8px; padding-bottom: 5px; border-bottom: 1px solid #777; font-size: 11pt; }
@@ -521,17 +523,19 @@
           <p>Billet Billy · <span id="printDate"></span></p>
         </div>
       </header>
-      <img id="printPartImage" class="print-part-image" alt="Part screenshot" hidden>
-      <div class="print-meta">
-        <div><span>Customer</span><strong id="printCustomer">—</strong></div>
-        <div><span>Part</span><strong id="printPartName">—</strong></div>
-        <div><span>Quantity</span><strong id="printQuantity">—</strong></div>
+      <div id="printOverview" class="print-overview">
+        <div class="print-meta">
+          <div><span>Customer</span><strong id="printCustomer">—</strong></div>
+          <div><span>Part</span><strong id="printPartName">—</strong></div>
+          <div><span>Quantity</span><strong id="printQuantity">—</strong></div>
+          <div><span>Material</span><strong id="printMaterial">—</strong></div>
+        </div>
+        <img id="printPartImage" class="print-part-image" alt="Part screenshot" hidden>
       </div>
       <h2>Part details</h2>
       <table class="print-table">
         <tbody>
           <tr><th scope="row">Finished size</th><td id="printDimensions"></td></tr>
-          <tr><th scope="row">Material</th><td id="printMaterial"></td></tr>
           <tr><th scope="row">Stock blank</th><td id="printStock"></td></tr>
           <tr><th scope="row">Rush</th><td id="printRush"></td></tr>
           <tr><th scope="row">Machining features</th><td id="printFeatures"></td></tr>
@@ -1142,6 +1146,7 @@
       });
       const printImage = document.getElementById("printPartImage");
       printImage.hidden = !quote.partImage;
+      document.getElementById("printOverview").classList.toggle("has-image", Boolean(quote.partImage));
       if (quote.partImage) printImage.src = quote.partImage;
       else printImage.removeAttribute("src");
     }
