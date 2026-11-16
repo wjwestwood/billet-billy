@@ -298,7 +298,7 @@
       .print-title { text-align: right; }
       .print-title h1 { margin: 0; font-size: 21pt; letter-spacing: 0; }
       .print-title p { margin: 3px 0 0; color: #444; }
-      .print-part-image { display: block; max-width: 100%; max-height: 75mm; margin: 16px auto 0; object-fit: contain; }
+      .print-part-image { display: block; max-width: 100%; max-height: 30mm; margin: 8px auto 0; object-fit: contain; }
       .print-part-image[hidden] { display: none; }
       .print-meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin: 20px 0 24px; }
       .print-meta span, .print-label { display: block; margin-bottom: 3px; color: #444; font-size: 8pt; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
@@ -445,7 +445,7 @@
             <section class="part-image-section" aria-labelledby="partImageHeading">
               <span id="partImageHeading" class="part-image-label">Part screenshot</span>
               <div id="partImagePaste" class="part-image-paste" tabindex="0" aria-label="Paste a part screenshot here">
-                <span id="partImagePrompt">Click here, then paste a screenshot (Ctrl+V / Cmd+V; max 1.5 MB)</span>
+                <span id="partImagePrompt">Paste a screenshot of the part<br>Click here, then paste (Ctrl+V; max 1.5 MB)</span>
                 <img id="partImagePreview" class="part-image-preview" alt="Pasted screenshot of the part" hidden>
               </div>
               <div class="part-image-actions">
