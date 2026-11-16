@@ -213,6 +213,15 @@
     .quote-header-row { display: flex; justify-content: space-between; align-items: center; }
     .quote-chip { padding: 4px 8px; border-radius: 5px; background: rgba(245, 158, 11, .14); color: var(--accent); font-size: .64rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
     .quote-body { padding: 18px 20px 20px; }
+    .part-image-section { margin-bottom: 18px; }
+    .part-image-label { display: block; margin-bottom: 7px; color: #cbd5e1; font-size: .73rem; font-weight: 700; }
+    .part-image-paste { display: grid; min-height: 82px; place-items: center; padding: 10px; border: 1px dashed #64748b; border-radius: 8px; background: rgba(15, 23, 42, .45); color: var(--muted); font-size: .72rem; text-align: center; cursor: text; }
+    .part-image-paste:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+    .part-image-preview { display: block; max-width: 100%; max-height: 180px; border-radius: 5px; object-fit: contain; }
+    .part-image-preview[hidden] { display: none; }
+    .part-image-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 7px; }
+    .part-image-actions .button { min-height: 31px; font-size: .68rem; }
+    .part-image-status { margin: 6px 0 0; color: var(--muted); font-size: .68rem; }
     .quote-line { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 12px; color: #cbd5e1; font-size: .78rem; }
     .quote-line span:last-child { color: var(--text); font: 600 .77rem "JetBrains Mono", monospace; text-align: right; }
     .quote-line.subtle { color: var(--muted); font-size: .7rem; }
@@ -289,6 +298,8 @@
       .print-title { text-align: right; }
       .print-title h1 { margin: 0; font-size: 21pt; letter-spacing: 0; }
       .print-title p { margin: 3px 0 0; color: #444; }
+      .print-part-image { display: block; max-width: 100%; max-height: 75mm; margin: 16px auto 0; object-fit: contain; }
+      .print-part-image[hidden] { display: none; }
       .print-meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin: 20px 0 24px; }
       .print-meta span, .print-label { display: block; margin-bottom: 3px; color: #444; font-size: 8pt; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
       .print-meta strong { font-size: 11pt; }
@@ -431,6 +442,17 @@
             <div class="quote-header-row"><h2 id="quote-heading">Estimate</h2><span class="quote-chip">Draft</span></div>
           </div>
           <div class="quote-body">
+            <section class="part-image-section" aria-labelledby="partImageHeading">
+              <span id="partImageHeading" class="part-image-label">Part screenshot</span>
+              <div id="partImagePaste" class="part-image-paste" tabindex="0" aria-label="Paste a part screenshot here">
+                <span id="partImagePrompt">Click here, then paste a screenshot (Ctrl+V / Cmd+V; max 1.5 MB)</span>
+                <img id="partImagePreview" class="part-image-preview" alt="Pasted screenshot of the part" hidden>
+              </div>
+              <div class="part-image-actions">
+                <button id="removePartImage" class="button" type="button" hidden>Remove screenshot</button>
+              </div>
+              <p id="partImageStatus" class="part-image-status" role="status" aria-live="polite"></p>
+            </section>
             <div class="quote-line"><span>Stock material</span><span id="materialCost">$0.00</span></div>
             <div class="quote-line"><span>Machining labor</span><span id="laborCost">$0.00</span></div>
             <div class="quote-line"><span id="rushLineLabel">Rush surcharge (off)</span><span id="rushCost">$0.00</span></div>
@@ -494,6 +516,7 @@
           <p>Billet Billy · <span id="printDate"></span></p>
         </div>
       </header>
+      <img id="printPartImage" class="print-part-image" alt="Part screenshot" hidden>
       <div class="print-meta">
         <div><span>Customer</span><strong id="printCustomer">—</strong></div>
         <div><span>Part</span><strong id="printPartName">—</strong></div>
@@ -548,7 +571,7 @@
       cleanupAllowanceMm: 1, stockId: "",
       rushEnabled: false, holesEnabled: false, holesCount: 1, threadsEnabled: false, threadsCount: 1, pitaFactor: 0,
       hexEnabled: false, hexCount: 1, externalThreadsEnabled: false, externalThreadsCount: 1,
-      secondOpsEnabled: false, secondOpsCount: 1, notes: ""
+      secondOpsEnabled: false, secondOpsCount: 1, notes: "", partImage: ""
     };
     const clone = value => JSON.parse(JSON.stringify(value));
     let config = loadConfig();
@@ -573,7 +596,11 @@
     function loadQuote() {
       try {
         const saved = JSON.parse(localStorage.getItem(QUOTE_KEY));
-        if (saved && typeof saved === "object") return { ...DEFAULT_QUOTE, ...saved };
+        if (saved && typeof saved === "object") {
+          const partImage = typeof saved.partImage === "string" &&
+            /^data:image\/(png|jpeg|webp|gif);base64,/.test(saved.partImage) ? saved.partImage : "";
+          return { ...DEFAULT_QUOTE, ...saved, partImage };
+        }
       } catch (error) {
         console.warn("Could not load the saved draft quote.", error);
       }
@@ -586,7 +613,37 @@
 
     function persistQuote() {
       clearTimeout(saveTimer);
-      saveTimer = setTimeout(() => localStorage.setItem(QUOTE_KEY, JSON.stringify(quote)), 100);
+      saveTimer = setTimeout(() => {
+        try {
+          localStorage.setItem(QUOTE_KEY, JSON.stringify(quote));
+        } catch (error) {
+          console.error("Could not save the draft quote.", error);
+          document.getElementById("partImageStatus").textContent =
+            "Could not save the draft. Remove the screenshot or try a smaller image.";
+        }
+      }, 100);
+    }
+
+    function renderPartImage() {
+      const hasImage = Boolean(quote.partImage);
+      const preview = document.getElementById("partImagePreview");
+      preview.hidden = !hasImage;
+      if (hasImage) preview.src = quote.partImage;
+      else preview.removeAttribute("src");
+      document.getElementById("partImagePrompt").hidden = hasImage;
+      document.getElementById("removePartImage").hidden = !hasImage;
+    }
+
+    function readImageAsDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.addEventListener("load", () => {
+          if (typeof reader.result === "string") resolve(reader.result);
+          else reject(new Error("The screenshot could not be read."));
+        });
+        reader.addEventListener("error", () => reject(new Error("The screenshot could not be read.")));
+        reader.readAsDataURL(file);
+      });
     }
 
     function numberOrZero(value) {
@@ -1028,11 +1085,58 @@
       Object.entries(printValues).forEach(([id, value]) => {
         document.getElementById(id).textContent = value;
       });
+      const printImage = document.getElementById("printPartImage");
+      printImage.hidden = !quote.partImage;
+      if (quote.partImage) printImage.src = quote.partImage;
+      else printImage.removeAttribute("src");
     }
 
-    document.getElementById("exportPdf").addEventListener("click", () => {
+    document.getElementById("exportPdf").addEventListener("click", async () => {
       renderPrintDocument();
+      const printImage = document.getElementById("printPartImage");
+      if (!printImage.hidden) {
+        try {
+          await printImage.decode();
+        } catch (error) {
+          console.error("Could not load the screenshot for PDF export.", error);
+          document.getElementById("partImageStatus").textContent = "Screenshot could not be loaded for PDF export.";
+          return;
+        }
+      }
       window.print();
+    });
+
+    document.getElementById("partImagePaste").addEventListener("paste", async event => {
+      const imageItem = [...event.clipboardData.items].find(item => item.type.startsWith("image/"));
+      if (!imageItem) return;
+      event.preventDefault();
+      const imageFile = imageItem.getAsFile();
+      if (!imageFile) {
+        document.getElementById("partImageStatus").textContent = "The pasted image could not be read.";
+        return;
+      }
+      if (!["image/png", "image/jpeg", "image/webp", "image/gif"].includes(imageFile.type)) {
+        document.getElementById("partImageStatus").textContent = "Paste a PNG, JPEG, WebP, or GIF screenshot.";
+        return;
+      }
+      if (imageFile.size > 1.5 * 1024 * 1024) {
+        document.getElementById("partImageStatus").textContent = "Screenshot must be 1.5 MB or smaller.";
+        return;
+      }
+      try {
+        quote.partImage = await readImageAsDataUrl(imageFile);
+        renderPartImage();
+        document.getElementById("partImageStatus").textContent = "Screenshot added to this estimate.";
+        persistQuote();
+      } catch (error) {
+        document.getElementById("partImageStatus").textContent = error.message;
+      }
+    });
+    document.getElementById("removePartImage").addEventListener("click", () => {
+      quote.partImage = "";
+      renderPartImage();
+      document.getElementById("partImageStatus").textContent = "Screenshot removed.";
+      persistQuote();
     });
 
     document.getElementById("copyQuote").addEventListener("click", async event => {
@@ -1049,10 +1153,13 @@
       quote = clone(DEFAULT_QUOTE);
       localStorage.removeItem(QUOTE_KEY);
       applyQuoteToForm();
+      renderPartImage();
+      document.getElementById("partImageStatus").textContent = "";
     });
 
     renderSettings();
     applyQuoteToForm();
+    renderPartImage();
   </script>
 </body>
 </html>
