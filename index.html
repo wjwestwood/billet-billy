@@ -320,7 +320,14 @@
     .settings-note { margin: 0 0 12px; color: var(--muted); font-size: .7rem; }
     .settings-group-title { margin: 16px 0 8px; color: #cbd5e1; font-size: .72rem; font-weight: 800; }
     .stock-table-wrap { overflow-x: auto; }
-    .stock-table { width: 100%; min-width: 620px; border-collapse: separate; border-spacing: 0 5px; }
+    .stock-table { width: 100%; min-width: 640px; table-layout: fixed; border-collapse: separate; border-spacing: 0 5px; }
+    .stock-table .stock-material-column { width: 30%; }
+    .stock-table .stock-length-column { width: 11%; }
+    .stock-table .stock-dimension-column { width: 9%; }
+    .stock-table .stock-unit-column { width: 10%; }
+    .stock-table .stock-price-column { width: 15%; }
+    .stock-table .stock-availability-column { width: 10%; }
+    .stock-table .stock-action-column { width: 6%; }
     .stock-table th { padding: 0 5px 3px; color: var(--muted); font-size: .61rem; font-weight: 700; text-align: left; }
     .stock-table td { padding: 0 3px; }
     .stock-table input, .stock-table select { height: 33px; padding: 5px 6px; font-size: .69rem; }
@@ -330,7 +337,14 @@
     .settings-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
     .settings-actions .button { min-height: 33px; font-size: .68rem; }
     .rate-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-    .rate-grid .field label { font-size: .66rem; }
+    .rate-grid .field label {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1px;
+      font-size: .66rem;
+    }
+    .rate-grid .field .field-unit { color: var(--muted); font-size: .62rem; font-weight: 400; line-height: 1.2; }
     .footer-note { margin-top: 15px; color: var(--muted); font-size: .68rem; }
     .hidden-file { display: none; }
     @media (max-width: 800px) {
@@ -576,6 +590,16 @@
                 <div class="settings-group-title">Stock catalog</div>
                 <div class="stock-table-wrap">
                   <table class="stock-table">
+                    <colgroup>
+                      <col class="stock-material-column">
+                      <col class="stock-length-column">
+                      <col class="stock-dimension-column">
+                      <col class="stock-dimension-column">
+                      <col class="stock-unit-column">
+                      <col class="stock-price-column">
+                      <col class="stock-availability-column">
+                      <col class="stock-action-column">
+                    </colgroup>
                     <thead><tr><th>Material / stock</th><th>Length</th><th>Width</th><th>Thick.</th><th>Unit</th><th>Price / blank</th><th>In stock</th><th></th></tr></thead>
                     <tbody id="stockRows"></tbody>
                   </table>
@@ -586,73 +610,73 @@
                   <button id="importCatalog" class="button" type="button">Import catalog CSV</button>
                   <input id="catalogFile" class="hidden-file" type="file" accept=".csv,text/csv">
                 </div>
-                <div class="settings-group-title">Material removal rates (cm³/min)</div>
+                <div class="settings-group-title">Material removal rates</div>
                 <p class="settings-note">One provisional rate per exact material name. Cycle time uses rectangular stock volume removed ÷ this rate, plus selected feature times. Calibrate each example rate with completed shop jobs.</p>
                 <div id="materialRemovalRates" class="rate-grid"></div>
-                <div class="settings-group-title">Shop estimate inputs</div>
+                <div class="settings-group-title">Shop Parameters</div>
                 <div class="rate-grid">
-                  <div class="field"><label for="hourlyRate">Shop rate ($ / hour)</label><input id="hourlyRate" type="number" min="0" step="any"></div>
-                  <div class="field"><label for="setupMinutes">Setup time (minutes / job)</label><input id="setupMinutes" type="number" min="0" step="1"></div>
+                  <div class="field"><label for="hourlyRate"><span>Shop rate</span><span class="field-unit">$ / hour</span></label><input id="hourlyRate" type="number" min="0" step="any"></div>
+                  <div class="field"><label for="setupMinutes"><span>Setup time</span><span class="field-unit">minutes / job</span></label><input id="setupMinutes" type="number" min="0" step="1"></div>
                   <div class="field">
                     <div class="field-label-with-info">
-                      <label for="firstArticlePenaltyPercent">First-Article Penalty (%)</label>
+                      <label for="firstArticlePenaltyPercent"><span>First-Article Penalty</span><span class="field-unit">%</span></label>
                       <button class="info-button" type="button" aria-label="First-article penalty help" aria-describedby="firstArticlePenaltyHelp" aria-expanded="false">i<span id="firstArticlePenaltyHelp" class="info-tooltip" role="tooltip">Extra cycle time added to Part #1 for proving out feeds, speeds, and offsets before hitting full speed.<br><br><strong>Examples:</strong><span class="tooltip-example">&bull; <strong>150%:</strong> A 20 min part takes <strong>50 min</strong> for piece #1, then tapers down.</span><span class="tooltip-example">&bull; <strong>100%:</strong> Part #1 takes twice the base cycle time (a 20 min part takes 40 min).</span><span class="tooltip-example">&bull; <strong>0%:</strong> No prove-out slowdown; Part #1 runs at base cycle time.</span></span></button>
                     </div>
                     <input id="firstArticlePenaltyPercent" type="number" min="0" step="any" aria-describedby="firstArticlePenaltyHelp">
                   </div>
                   <div class="field">
                     <div class="field-label-with-info">
-                      <label for="learningDecayRate">Learning Decay Rate</label>
+                      <label for="learningDecayRate"><span>Learning Decay Rate</span><span class="field-unit">per part</span></label>
                       <button class="info-button" type="button" aria-label="Learning decay rate help" aria-describedby="learningDecayHelp" aria-expanded="false">i<span id="learningDecayHelp" class="info-tooltip" role="tooltip">How quickly the first-article slowdown disappears on subsequent parts; higher values make it drop faster.<br><br><strong>Examples:</strong><span class="tooltip-example">&bull; <strong>1:</strong> Each additional part leaves about 37% of the previous extra-time penalty (not 1%).</span><span class="tooltip-example">&bull; <strong>1.1:</strong> Reaches normal cycle speed by Part #4.</span><span class="tooltip-example">&bull; <strong>0.4:</strong> Takes about 8 parts to reach normal cycle speed.</span></span></button>
                     </div>
                     <input id="learningDecayRate" type="number" min="0" step="any" aria-describedby="learningDecayHelp">
                   </div>
                   <div class="field">
                     <div class="field-label-with-info">
-                      <label for="maxBatchSpeedupPercent">Max Batch Speedup (%)</label>
+                      <label for="maxBatchSpeedupPercent"><span>Max Batch Speedup</span><span class="field-unit">%</span></label>
                       <button class="info-button" type="button" aria-label="Maximum batch speedup help" aria-describedby="maxBatchSpeedupHelp" aria-expanded="false">i<span id="maxBatchSpeedupHelp" class="info-tooltip" role="tooltip">Maximum cycle-time discount on large production runs once toolpaths and fixtures are dialed in.<br><br><strong>Examples:</strong><span class="tooltip-example">&bull; <strong>20%:</strong> A 20 min part bottoms out at <strong>16 min</strong> on high-volume orders.</span><span class="tooltip-example">&bull; <strong>0%:</strong> No batch-speedup discount; first-article learning can still reduce cycle time.</span></span></button>
                     </div>
                     <input id="maxBatchSpeedupPercent" type="number" min="0" max="100" step="any" aria-describedby="maxBatchSpeedupHelp">
                   </div>
                   <div class="field">
                     <div class="field-label-with-info">
-                      <label for="batchSpeedupHalfLifeQty">Batch Speedup Half-Life (Qty)</label>
+                      <label for="batchSpeedupHalfLifeQty"><span>Batch Speedup Half-Life</span><span class="field-unit">parts</span></label>
                       <button class="info-button" type="button" aria-label="Batch speedup half-life help" aria-describedby="batchSpeedupHalfLifeHelp" aria-expanded="false">i<span id="batchSpeedupHalfLifeHelp" class="info-tooltip" role="tooltip">Sets how quickly volume cycle-time discounts kick in as order size grows.<br><br><strong>Examples:</strong><span class="tooltip-example">&bull; <strong>15 pcs:</strong> Hits half of max speedup at Qty 16, and near-full speedup by Qty 45–60.</span><span class="tooltip-example">&bull; <strong>5 pcs:</strong> Discounts ramp up quickly on small batches (10–15 pcs).</span><span class="tooltip-example">&bull; <strong>40 pcs:</strong> Discounts are reserved for large production runs (100+ pcs).</span></span></button>
                     </div>
                     <input id="batchSpeedupHalfLifeQty" type="number" min="0.1" step="any" aria-describedby="batchSpeedupHalfLifeHelp">
                   </div>
                   <div class="field">
                     <div class="field-label-with-info">
-                      <label for="holeMinutes">Drilled hole (minutes/mm)</label>
-                      <button class="info-button" type="button" aria-label="Drilled-hole rate help" aria-describedby="holeMinutesHelp" aria-expanded="false">i<span id="holeMinutesHelp" class="info-tooltip" role="tooltip">Minutes/mm is multiplied by finished part length in millimeters and the number of drilled holes.<br><br><strong>Example:</strong> 0.05 min/mm × 100 mm × 2 holes = 10 min/part.</span></button>
+                      <label for="holeSecondsPerMm"><span>Drilled hole</span><span class="field-unit">seconds / mm</span></label>
+                      <button class="info-button" type="button" aria-label="Drilled-hole rate help" aria-describedby="holeSecondsPerMmHelp" aria-expanded="false">i<span id="holeSecondsPerMmHelp" class="info-tooltip" role="tooltip">Seconds/mm is multiplied by finished part length in millimeters and the number of drilled holes.<br><br><strong>Example:</strong> 3 sec/mm × 100 mm × 2 holes = 600 sec (10 min)/part.</span></button>
                     </div>
-                    <input id="holeMinutes" type="number" min="0" step="any" aria-describedby="holeMinutesHelp">
+                    <input id="holeSecondsPerMm" type="number" min="0" step="any" aria-describedby="holeSecondsPerMmHelp">
                   </div>
                   <div class="field">
                     <div class="field-label-with-info">
-                      <label for="threadMinutes">Threaded hole (minutes/mm)</label>
-                      <button class="info-button" type="button" aria-label="Threaded-hole rate help" aria-describedby="threadMinutesHelp" aria-expanded="false">i<span id="threadMinutesHelp" class="info-tooltip" role="tooltip">Minutes/mm is multiplied by finished part length in millimeters and the number of threaded holes.<br><br><strong>Example:</strong> 0.05 min/mm × 100 mm × 2 threaded holes = 10 min/part.</span></button>
+                      <label for="threadSecondsPerMm"><span>Threaded hole</span><span class="field-unit">seconds / mm</span></label>
+                      <button class="info-button" type="button" aria-label="Threaded-hole rate help" aria-describedby="threadSecondsPerMmHelp" aria-expanded="false">i<span id="threadSecondsPerMmHelp" class="info-tooltip" role="tooltip">Seconds/mm is multiplied by finished part length in millimeters and the number of threaded holes.<br><br><strong>Example:</strong> 3 sec/mm × 100 mm × 2 holes = 600 sec (10 min)/part.</span></button>
                     </div>
-                    <input id="threadMinutes" type="number" min="0" step="any" aria-describedby="threadMinutesHelp">
+                    <input id="threadSecondsPerMm" type="number" min="0" step="any" aria-describedby="threadSecondsPerMmHelp">
                   </div>
                   <div class="field">
                     <div class="field-label-with-info">
-                      <label for="externalThreadMinutes">External thread (minutes/mm)</label>
-                      <button class="info-button" type="button" aria-label="External-thread rate help" aria-describedby="externalThreadMinutesHelp" aria-expanded="false">i<span id="externalThreadMinutesHelp" class="info-tooltip" role="tooltip">Minutes/mm is multiplied by finished part length in millimeters and the number of external threads.<br><br><strong>Example:</strong> 0.05 min/mm × 100 mm × 2 external threads = 10 min/part.</span></button>
+                      <label for="externalThreadSecondsPerMm"><span>External thread</span><span class="field-unit">seconds / mm</span></label>
+                      <button class="info-button" type="button" aria-label="External-thread rate help" aria-describedby="externalThreadSecondsPerMmHelp" aria-expanded="false">i<span id="externalThreadSecondsPerMmHelp" class="info-tooltip" role="tooltip">Seconds/mm is multiplied by finished part length in millimeters and the number of external threads.<br><br><strong>Example:</strong> 3 sec/mm × 100 mm × 2 threads = 600 sec (10 min)/part.</span></button>
                     </div>
-                    <input id="externalThreadMinutes" type="number" min="0" step="any" aria-describedby="externalThreadMinutesHelp">
+                    <input id="externalThreadSecondsPerMm" type="number" min="0" step="any" aria-describedby="externalThreadSecondsPerMmHelp">
                   </div>
                   <div class="field">
                     <div class="field-label-with-info">
-                      <label for="hexMinutes">Hex socket (minutes/mm)</label>
-                      <button class="info-button" type="button" aria-label="Hex-socket rate help" aria-describedby="hexMinutesHelp" aria-expanded="false">i<span id="hexMinutesHelp" class="info-tooltip" role="tooltip">Minutes/mm is multiplied by finished part length in millimeters and the number of hex sockets.<br><br><strong>Example:</strong> 0.05 min/mm × 100 mm × 2 hex sockets = 10 min/part.</span></button>
+                      <label for="hexSecondsPerMm"><span>Hex socket</span><span class="field-unit">seconds / mm</span></label>
+                      <button class="info-button" type="button" aria-label="Hex-socket rate help" aria-describedby="hexSecondsPerMmHelp" aria-expanded="false">i<span id="hexSecondsPerMmHelp" class="info-tooltip" role="tooltip">Seconds/mm is multiplied by finished part length in millimeters and the number of hex sockets.<br><br><strong>Example:</strong> 3 sec/mm × 100 mm × 2 sockets = 600 sec (10 min)/part.</span></button>
                     </div>
-                    <input id="hexMinutes" type="number" min="0" step="any" aria-describedby="hexMinutesHelp">
+                    <input id="hexSecondsPerMm" type="number" min="0" step="any" aria-describedby="hexSecondsPerMmHelp">
                   </div>
-                  <div class="field"><label for="secondOpMinutes">Minutes / second operation</label><input id="secondOpMinutes" type="number" min="0" step="any"></div>
+                  <div class="field"><label for="secondOpMinutes"><span>Second operation time</span><span class="field-unit">minutes / operation</span></label><input id="secondOpMinutes" type="number" min="0" step="any"></div>
                 </div>
                 <div class="settings-actions"><button id="resetConfig" class="button" type="button">Restore example data</button></div>
-                <p class="footer-note">Drilled-hole, thread, and hex-socket rates are multiplied by finished part length in millimeters; second-operation time remains per operation.</p>
+                <p class="footer-note">Drilled-hole, thread, external-thread, and hex-socket rates are in seconds/mm and multiplied by finished part length in millimeters; second-operation time remains per operation.</p>
                 <p class="footer-note">Material is prorated by stock length used (finished part length plus length allowance) × quantity. Custom tooling is charged at the customer-paid share; PITA applies to labor only, and Rush to material and labor. Scrap/reuse, finishing, tax, and other special tooling are not included.</p>
               </div>
             </details>
@@ -722,8 +746,8 @@
         { id: "ss-1", material: "304 Stainless", length: 6, width: 2, thickness: 1, unit: "in", price: 34 }
       ],
       rates: {
-        hourlyRate: 85, rushPercent: 20, setupMinutes: 30, holeMinutes: 3, threadMinutes: 8,
-        externalThreadMinutes: 8, hexMinutes: 6, secondOpMinutes: 20, firstArticlePenaltyPercent: 150,
+        hourlyRate: 85, rushPercent: 20, setupMinutes: 30, holeSecondsPerMm: 3, threadSecondsPerMm: 8,
+        externalThreadSecondsPerMm: 8, hexSecondsPerMm: 6, secondOpMinutes: 20, firstArticlePenaltyPercent: 150,
         learningDecayRate: 1.1, maxBatchSpeedupPercent: 20, batchSpeedupHalfLifeQty: 15
       },
       materialRemovalRates: {
@@ -790,6 +814,18 @@
         const saved = JSON.parse(localStorage.getItem(CONFIG_KEY));
         if (saved && Array.isArray(saved.stock) && saved.rates) {
           const rates = { ...DEFAULT_CONFIG.rates, ...saved.rates };
+          [
+            ["holeSecondsPerMm", "holeMinutes"],
+            ["threadSecondsPerMm", "threadMinutes"],
+            ["externalThreadSecondsPerMm", "externalThreadMinutes"],
+            ["hexSecondsPerMm", "hexMinutes"]
+          ].forEach(([secondsKey, legacyKey]) => {
+            if (!Object.prototype.hasOwnProperty.call(saved.rates, secondsKey) &&
+                Object.prototype.hasOwnProperty.call(saved.rates, legacyKey)) {
+              rates[secondsKey] = saved.rates[legacyKey];
+            }
+            delete rates[legacyKey];
+          });
           delete rates.cycleMinutes;
           const legacyMaterialRemovalRate = Number(saved.rates.materialRemovalRate);
           const savedMaterialRemovalRates = saved.materialRemovalRates &&
@@ -995,9 +1031,9 @@
     }
 
     function estimateLabor(quantity) {
-      const lengthScaledMinutes = (minutesPerMm, count) =>
-        numberOrZero(minutesPerMm) * numberOrZero(count) *
-        convert(numberOrZero(quote.length), quote.unit, "mm");
+      const lengthScaledMinutes = (secondsPerMm, count) =>
+        numberOrZero(secondsPerMm) * numberOrZero(count) *
+        convert(numberOrZero(quote.length), quote.unit, "mm") / 60;
       const stock = config.stock.find(item => item.id === quote.stockId);
       let sizeCycleMinutes = 0;
       if (stock) {
@@ -1012,10 +1048,10 @@
         if (materialRemovalRate > 0) sizeCycleMinutes = removedVolumeCm3 / materialRemovalRate;
       }
       const featureMinutes =
-        (quote.holesEnabled ? lengthScaledMinutes(config.rates.holeMinutes, quote.holesCount) : 0) +
-        (quote.threadsEnabled ? lengthScaledMinutes(config.rates.threadMinutes, quote.threadsCount) : 0) +
-        (quote.hexEnabled ? lengthScaledMinutes(config.rates.hexMinutes, quote.hexCount) : 0) +
-        (quote.externalThreadsEnabled ? lengthScaledMinutes(config.rates.externalThreadMinutes, quote.externalThreadsCount) : 0) +
+        (quote.holesEnabled ? lengthScaledMinutes(config.rates.holeSecondsPerMm, quote.holesCount) : 0) +
+        (quote.threadsEnabled ? lengthScaledMinutes(config.rates.threadSecondsPerMm, quote.threadsCount) : 0) +
+        (quote.hexEnabled ? lengthScaledMinutes(config.rates.hexSecondsPerMm, quote.hexCount) : 0) +
+        (quote.externalThreadsEnabled ? lengthScaledMinutes(config.rates.externalThreadSecondsPerMm, quote.externalThreadsCount) : 0) +
         (quote.secondOpsEnabled ? numberOrZero(quote.secondOpsCount) * numberOrZero(config.rates.secondOpMinutes) : 0);
       const baseCycleMinutes = sizeCycleMinutes + featureMinutes;
       const firstArticlePenaltyPercent = numberOrZero(config.rates.firstArticlePenaltyPercent);
@@ -1091,7 +1127,7 @@
         config.materialRemovalRates[material] = rate;
         container.insertAdjacentHTML("beforeend", `
           <div class="field">
-            <label for="materialRemovalRate${index}">${escapeHtml(material)}</label>
+            <label for="materialRemovalRate${index}"><span>${escapeHtml(material)}</span><span class="field-unit">cm³/min</span></label>
             <input id="materialRemovalRate${index}" data-material-removal-rate="${escapeHtml(material)}"
               type="number" min="0.1" step="any" value="${escapeHtml(rate)}"
               aria-label="${escapeHtml(material)} material removal rate in cubic centimeters per minute">
