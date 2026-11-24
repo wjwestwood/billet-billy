@@ -268,6 +268,7 @@
     .quote-card { position: sticky; top: 16px; padding: 0; overflow: hidden; }
     .quote-header { padding: 19px 20px; border-bottom: 1px solid var(--card-border); }
     .quote-header-row { display: flex; justify-content: space-between; align-items: center; }
+    .quote-estimate-number { margin-left: 7px; color: var(--muted); font: 600 .68em "JetBrains Mono", monospace; }
     .quote-chip { padding: 4px 8px; border-radius: 5px; background: rgba(245, 158, 11, .14); color: var(--accent); font-size: .64rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
     .quote-body { padding: 18px 20px 20px; }
     .part-image-section { margin-bottom: 18px; }
@@ -290,6 +291,8 @@
     .quote-line span:last-child { color: var(--text); font: 600 .77rem "JetBrains Mono", monospace; text-align: right; }
     .quote-line.subtle { color: var(--muted); font-size: .7rem; }
     .quote-line[hidden], .custom-tooling-fields[hidden], #printCustomToolingRow[hidden] { display: none; }
+    .multiple-quantity-toggle { display: flex; align-items: center; gap: 8px; margin-top: 7px; color: #cbd5e1; font-size: .7rem; font-weight: 700; cursor: pointer; }
+    .multiple-quantity-toggle input { width: 16px; height: 16px; margin: 0; accent-color: var(--primary); }
     .custom-tooling-fields { margin-top: 12px; }
     .quote-divider { height: 1px; margin: 16px 0; background: var(--card-border); }
     .total-label { color: var(--muted); font-size: .69rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
@@ -379,6 +382,9 @@
       .print-costs th { width: auto; }
       .print-costs td { text-align: right; white-space: nowrap; }
       .print-costs .print-total th, .print-costs .print-total td { border-top: 2px solid #111; border-bottom: 2px solid #111; background: #eee; font-size: 13pt; font-weight: 700; }
+      .print-quantity-options th { width: auto; }
+      .print-quantity-options td { text-align: right; white-space: nowrap; }
+      .print-quantity-options .selected-quantity td { border-top: 2px solid #111; border-bottom: 2px solid #111; background: #fff3cd; font-weight: 700; }
       .print-unit-price { margin-top: 8px; text-align: right; font-weight: 600; }
       .print-disclaimer { margin-top: 26px; padding-top: 8px; border-top: 1px solid #999; color: #444; font-size: 8pt; }
     }
@@ -532,7 +538,7 @@
       <div class="quote-column">
         <aside class="card quote-card" aria-labelledby="quote-heading">
           <div class="quote-header">
-            <div class="quote-header-row"><h2 id="quote-heading">Estimate</h2><span class="quote-chip">Draft</span></div>
+            <div class="quote-header-row"><h2 id="quote-heading">Estimate <span id="quoteEstimateNumber" class="quote-estimate-number"></span></h2><span class="quote-chip">Draft</span></div>
           </div>
           <div class="quote-body">
             <section class="part-image-section" aria-labelledby="partImageHeading">
@@ -557,6 +563,7 @@
             <div id="unitPrice" class="unit-price">Enter dimensions to get a stock match.</div>
             <div class="quote-divider"></div>
             <div class="quote-line subtle"><span>Estimate includes</span><span id="featureSummary">No features selected</span></div>
+            <label class="multiple-quantity-toggle"><input id="showMultipleQuantities" type="checkbox">Show multiple qty's on estimate</label>
             <div class="quote-actions">
               <button id="copyQuote" class="button" type="button">Copy Summary</button>
               <button id="newQuote" class="button" type="button">New quote</button>
@@ -579,17 +586,13 @@
                   <button id="importCatalog" class="button" type="button">Import catalog CSV</button>
                   <input id="catalogFile" class="hidden-file" type="file" accept=".csv,text/csv">
                 </div>
+                <div class="settings-group-title">Material removal rates (cm³/min)</div>
+                <p class="settings-note">One provisional rate per exact material name. Cycle time uses rectangular stock volume removed ÷ this rate, plus selected feature times. Calibrate each example rate with completed shop jobs.</p>
+                <div id="materialRemovalRates" class="rate-grid"></div>
                 <div class="settings-group-title">Shop estimate inputs</div>
                 <div class="rate-grid">
                   <div class="field"><label for="hourlyRate">Shop rate ($ / hour)</label><input id="hourlyRate" type="number" min="0" step="any"></div>
                   <div class="field"><label for="setupMinutes">Setup time (minutes / job)</label><input id="setupMinutes" type="number" min="0" step="1"></div>
-                  <div class="field">
-                    <div class="field-label-with-info">
-                      <label for="cycleMinutes">Base cycle time (minutes / part)</label>
-                      <button class="info-button" type="button" aria-label="Base cycle time help" aria-describedby="cycleMinutesHelp" aria-expanded="false">i<span id="cycleMinutesHelp" class="info-tooltip" role="tooltip">This is the normal machining cycle per part before the first-article penalty and batch speedup are applied.<br><br><strong>Example:</strong> A 30 min base cycle with a 150% first-article penalty takes <strong>75 min</strong> for Part #1. Setup time is added once per job.</span></button>
-                    </div>
-                    <input id="cycleMinutes" type="number" min="0" step="1" aria-describedby="cycleMinutesHelp">
-                  </div>
                   <div class="field">
                     <div class="field-label-with-info">
                       <label for="firstArticlePenaltyPercent">First-Article Penalty (%)</label>
@@ -668,6 +671,7 @@
       </header>
       <div id="printOverview" class="print-overview">
         <div class="print-meta">
+          <div><span>Estimate no.</span><strong id="printEstimateNumber">—</strong></div>
           <div><span>Customer</span><strong id="printCustomer">—</strong></div>
           <div><span>Part</span><strong id="printPartName">—</strong></div>
           <div><span>Quantity</span><strong id="printQuantity">—</strong></div>
@@ -696,6 +700,13 @@
         </tbody>
       </table>
       <p id="printUnitPrice" class="print-unit-price"></p>
+      <section id="printQuantityOptionsSection" hidden>
+        <h2>Multiple quantity pricing</h2>
+        <table class="print-table print-quantity-options">
+          <thead><tr><th scope="col">Quantity</th><th scope="col">Cost per part</th><th scope="col">Total cost</th></tr></thead>
+          <tbody id="printQuantityOptionsRows"></tbody>
+        </table>
+      </section>
       <p class="print-disclaimer">Estimate only. Verify material, tolerances, finish, and shop pricing before quoting. Estimate excludes scrap/reuse, finishing, tax, and other special tooling.</p>
     </section>
   </main>
@@ -703,9 +714,12 @@
   <script>
     const CONFIG_KEY = "billetBillyConfigV1";
     const QUOTE_KEY = "billetBillyQuoteV1";
+    const ESTIMATE_COUNTER_KEY = "billetBillyEstimateCounterV1";
     const SUPPORTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
     const PITA_MAX = 5;
     const PITA_RATE_PER_LEVEL = 0.03;
+    const DEFAULT_MATERIAL_REMOVAL_RATE = 2;
+    const ESTIMATE_QUANTITIES = [1, 2, 5, 10, 25, 50, 100, 200];
     const DEFAULT_CONFIG = {
       stock: [
         { id: "al-1", material: "6061 Aluminum", length: 6, width: 2, thickness: 1, unit: "in", price: 18 },
@@ -715,32 +729,100 @@
         { id: "ss-1", material: "304 Stainless", length: 6, width: 2, thickness: 1, unit: "in", price: 34 }
       ],
       rates: {
-        hourlyRate: 85, rushPercent: 20, setupMinutes: 30, cycleMinutes: 20, holeMinutes: 3, threadMinutes: 8,
+        hourlyRate: 85, rushPercent: 20, setupMinutes: 30, holeMinutes: 3, threadMinutes: 8,
         externalThreadMinutes: 8, hexMinutes: 6, secondOpMinutes: 20, firstArticlePenaltyPercent: 150,
         learningDecayRate: 1.1, maxBatchSpeedupPercent: 20, batchSpeedupHalfLifeQty: 15
+      },
+      materialRemovalRates: {
+        "6061 Aluminum": DEFAULT_MATERIAL_REMOVAL_RATE,
+        "1018 Steel": DEFAULT_MATERIAL_REMOVAL_RATE,
+        "304 Stainless": DEFAULT_MATERIAL_REMOVAL_RATE
       }
     };
     const DEFAULT_QUOTE = {
-      customer: "", partName: "", quantity: 1, material: "6061 Aluminum",
+      estimateNumber: "", customer: "", partName: "", quantity: 1, material: "6061 Aluminum",
       length: "", width: "", thickness: "", thicknessAutoFilled: null, unit: "mm", unitExplicit: false, lengthAllowancePercent: 10,
       cleanupAllowanceMm: 1, stockId: "",
       rushEnabled: false, holesEnabled: false, holesCount: 1, threadsEnabled: false, threadsCount: 1, pitaFactor: 0,
       customToolingEnabled: false, customToolingCost: 0, customToolingPercent: 100,
       hexEnabled: false, hexCount: 1, externalThreadsEnabled: false, externalThreadsCount: 1,
-      secondOpsEnabled: false, secondOpsCount: 1, notes: "", partImage: ""
+      secondOpsEnabled: false, secondOpsCount: 1, notes: "", partImage: "", showMultipleQuantities: false
     };
     const clone = value => JSON.parse(JSON.stringify(value));
     let config = loadConfig();
     let quote = loadQuote();
     let saveTimer;
 
+    function generateEstimateNumber() {
+      const date = new Date();
+      const datePart = [
+        String(date.getDate()).padStart(2, "0"),
+        String(date.getMonth() + 1).padStart(2, "0"),
+        String(date.getFullYear()).slice(-2)
+      ].join("");
+      let sequence = 125;
+      try {
+        const saved = Number.parseInt(localStorage.getItem(ESTIMATE_COUNTER_KEY) || "0", 10);
+        if (Number.isFinite(saved) && saved >= 0) sequence = Math.max(125, saved + 1);
+      } catch (error) {
+        console.warn("Could not read the estimate number counter.", error);
+      }
+      const estimateNumber = `PMS-${datePart}-${String(sequence).padStart(3, "0")}`;
+      try {
+        localStorage.setItem(ESTIMATE_COUNTER_KEY, String(sequence));
+      } catch (error) {
+        console.warn("Could not save the estimate number counter.", error);
+      }
+      return estimateNumber;
+    }
+
+    function ensureEstimateNumber() {
+      const currentEstimateNumber = typeof quote.estimateNumber === "string" ? quote.estimateNumber : "";
+      const legacyEstimateNumber = /^PMS-(\d{2})(\d{2})(\d{4})-(\d{3,})$/.exec(currentEstimateNumber);
+      if (legacyEstimateNumber && Number(legacyEstimateNumber[4]) >= 125) {
+        quote.estimateNumber =
+          `PMS-${legacyEstimateNumber[1]}${legacyEstimateNumber[2]}${legacyEstimateNumber[3].slice(-2)}-${legacyEstimateNumber[4]}`;
+        persistQuote();
+      } else if (!/^PMS-\d{6}-\d{3,}$/.test(currentEstimateNumber) ||
+                 Number(currentEstimateNumber.split("-").pop()) < 125) {
+        quote.estimateNumber = generateEstimateNumber();
+        persistQuote();
+      }
+      document.getElementById("quoteEstimateNumber").textContent = quote.estimateNumber;
+      return quote.estimateNumber;
+    }
+
     function loadConfig() {
       try {
         const saved = JSON.parse(localStorage.getItem(CONFIG_KEY));
         if (saved && Array.isArray(saved.stock) && saved.rates) {
+          const rates = { ...DEFAULT_CONFIG.rates, ...saved.rates };
+          delete rates.cycleMinutes;
+          const legacyMaterialRemovalRate = Number(saved.rates.materialRemovalRate);
+          const savedMaterialRemovalRates = saved.materialRemovalRates &&
+            typeof saved.materialRemovalRates === "object" && !Array.isArray(saved.materialRemovalRates)
+            ? saved.materialRemovalRates
+            : {};
+          const materialRemovalRates = { ...DEFAULT_CONFIG.materialRemovalRates, ...savedMaterialRemovalRates };
+          [...new Set(saved.stock
+            .filter(item => item && typeof item.material === "string")
+            .map(item => item.material.trim())
+            .filter(Boolean))].forEach(material => {
+            const hasSavedRate = Object.prototype.hasOwnProperty.call(savedMaterialRemovalRates, material);
+            const savedRate = Number(savedMaterialRemovalRates[material]);
+            if (hasSavedRate && Number.isFinite(savedRate) && savedRate > 0) {
+              materialRemovalRates[material] = savedRate;
+            } else if (Number.isFinite(legacyMaterialRemovalRate) && legacyMaterialRemovalRate > 0) {
+              materialRemovalRates[material] = legacyMaterialRemovalRate;
+            } else if (!Number.isFinite(Number(materialRemovalRates[material])) || Number(materialRemovalRates[material]) <= 0) {
+              materialRemovalRates[material] = DEFAULT_MATERIAL_REMOVAL_RATE;
+            }
+          });
+          delete rates.materialRemovalRate;
           return {
             stock: saved.stock.filter(item => item && typeof item.material === "string").map(item => ({ ...item })),
-            rates: { ...DEFAULT_CONFIG.rates, ...saved.rates }
+            rates,
+            materialRemovalRates
           };
         }
       } catch (error) {
@@ -902,17 +984,47 @@
       return { amount, percent, customer, pinner: quote.customToolingEnabled ? amount - customer : 0 };
     }
 
+    function estimateQuoteTotals(quantity, stock) {
+      const materialCost = stockMaterialCostPerPart(stock) * quantity;
+      const laborCost = estimateLabor(quantity).cost;
+      const pitaFactor = Math.min(PITA_MAX, Math.round(numberOrZero(quote.pitaFactor)));
+      const pitaCost = laborCost * pitaFactor * PITA_RATE_PER_LEVEL;
+      const subtotal = materialCost + laborCost;
+      const rushCost = quote.rushEnabled ? subtotal * numberOrZero(config.rates.rushPercent) / 100 : 0;
+      const toolingCost = customToolingSplit().customer;
+      return {
+        materialCost,
+        laborCost,
+        pitaCost,
+        rushCost,
+        total: subtotal + pitaCost + rushCost + toolingCost
+      };
+    }
+
     function estimateLabor(quantity) {
       const lengthScaledMinutes = (minutesPerMm, count) =>
         numberOrZero(minutesPerMm) * numberOrZero(count) *
         convert(numberOrZero(quote.length), quote.unit, "mm");
+      const stock = config.stock.find(item => item.id === quote.stockId);
+      let sizeCycleMinutes = 0;
+      if (stock) {
+        const [, stockWidthMm, stockThicknessMm] = stockSize(stock, "mm");
+        const blankVolumeCm3 = convert(requiredStockLength(), quote.unit, "mm") *
+          stockWidthMm * stockThicknessMm / 1000;
+        const finishedVolumeCm3 = convert(numberOrZero(quote.length), quote.unit, "mm") *
+          convert(numberOrZero(quote.width), quote.unit, "mm") *
+          convert(numberOrZero(quote.thickness), quote.unit, "mm") / 1000;
+        const removedVolumeCm3 = Math.max(0, blankVolumeCm3 - finishedVolumeCm3);
+        const materialRemovalRate = numberOrZero(config.materialRemovalRates[quote.material]);
+        if (materialRemovalRate > 0) sizeCycleMinutes = removedVolumeCm3 / materialRemovalRate;
+      }
       const featureMinutes =
         (quote.holesEnabled ? lengthScaledMinutes(config.rates.holeMinutes, quote.holesCount) : 0) +
         (quote.threadsEnabled ? lengthScaledMinutes(config.rates.threadMinutes, quote.threadsCount) : 0) +
         (quote.hexEnabled ? lengthScaledMinutes(config.rates.hexMinutes, quote.hexCount) : 0) +
         (quote.externalThreadsEnabled ? lengthScaledMinutes(config.rates.externalThreadMinutes, quote.externalThreadsCount) : 0) +
         (quote.secondOpsEnabled ? numberOrZero(quote.secondOpsCount) * numberOrZero(config.rates.secondOpMinutes) : 0);
-      const baseCycleMinutes = numberOrZero(config.rates.cycleMinutes) + featureMinutes;
+      const baseCycleMinutes = sizeCycleMinutes + featureMinutes;
       const firstArticlePenaltyPercent = numberOrZero(config.rates.firstArticlePenaltyPercent);
       const learningDecayRate = numberOrZero(config.rates.learningDecayRate);
       const maxBatchSpeedupPercent = numberOrZero(config.rates.maxBatchSpeedupPercent);
@@ -978,6 +1090,22 @@
       select.value = selected;
     }
 
+    function renderMaterialRemovalRates() {
+      const container = document.getElementById("materialRemovalRates");
+      const materials = [...new Set(config.stock.map(stock => stock.material.trim()).filter(Boolean))].sort();
+      materials.forEach((material, index) => {
+        const rate = numberOrZero(config.materialRemovalRates[material]) || DEFAULT_MATERIAL_REMOVAL_RATE;
+        config.materialRemovalRates[material] = rate;
+        container.insertAdjacentHTML("beforeend", `
+          <div class="field">
+            <label for="materialRemovalRate${index}">${escapeHtml(material)}</label>
+            <input id="materialRemovalRate${index}" data-material-removal-rate="${escapeHtml(material)}"
+              type="number" min="0.1" step="any" value="${escapeHtml(rate)}"
+              aria-label="${escapeHtml(material)} material removal rate in cubic centimeters per minute">
+          </div>`);
+      });
+    }
+
     function renderStockOptions() {
       const select = document.getElementById("stockSelect");
       const fits = findFittingStock();
@@ -1003,9 +1131,10 @@
         .every(id => numberOrZero(document.getElementById(id).value) > 0);
       const quoteReady = Boolean(stock && hasPartDimensions);
       const quantity = Math.max(1, Math.floor(numberOrZero(quote.quantity) || 1));
-      const laborEstimate = estimateLabor(quantity);
-      const materialCost = quoteReady ? stockMaterialCostPerPart(stock) * quantity : 0;
-      const laborCost = quoteReady ? laborEstimate.cost : 0;
+      const totals = quoteReady
+        ? estimateQuoteTotals(quantity, stock)
+        : { materialCost: 0, laborCost: 0, pitaCost: 0, rushCost: 0, total: customToolingSplit().customer };
+      const { materialCost, laborCost, pitaCost, rushCost, total } = totals;
       const pitaFactor = Math.min(PITA_MAX, Math.round(numberOrZero(quote.pitaFactor)));
       quote.pitaFactor = pitaFactor;
       const pitaRate = pitaFactor * PITA_RATE_PER_LEVEL;
@@ -1016,10 +1145,6 @@
       quote.customToolingPercent = tooling.percent;
       document.getElementById("customToolingCost").value = quote.customToolingCost;
       document.getElementById("customToolingPercent").value = tooling.percent;
-      const subtotal = materialCost + laborCost;
-      const pitaCost = quoteReady ? laborCost * pitaRate : 0;
-      const rushCost = quoteReady && quote.rushEnabled ? subtotal * rushPercent / 100 : 0;
-      const total = subtotal + pitaCost + rushCost + tooling.customer;
       document.getElementById("pitaFactor").value = pitaFactor;
       document.getElementById("pitaFactor").setAttribute("aria-valuetext", `Level ${pitaFactor} of ${PITA_MAX}; adds ${pitaPercent} percent`);
       document.getElementById("pitaFactorValue").textContent = `+${pitaPercent}%`;
@@ -1059,7 +1184,7 @@
         "customToolingCost", "customToolingPercent",
         "lengthAllowancePercent", "cleanupAllowanceMm"].forEach(key => setInputValue(key, quote[key]));
       ["rushEnabled", "holesEnabled", "threadsEnabled", "hexEnabled", "externalThreadsEnabled", "secondOpsEnabled",
-        "customToolingEnabled"].forEach(key => {
+        "customToolingEnabled", "showMultipleQuantities"].forEach(key => {
         document.getElementById(key).checked = Boolean(quote[key]);
       });
       renderCustomToolingFields();
@@ -1123,6 +1248,8 @@
           <td><button class="remove-stock" type="button" aria-label="Remove stock row">×</button></td>
         </tr>`).join("");
       Object.keys(config.rates).forEach(key => setInputValue(key, config.rates[key]));
+      document.getElementById("materialRemovalRates").replaceChildren();
+      renderMaterialRemovalRates();
       renderMaterials();
       renderQuote();
     }
@@ -1155,6 +1282,10 @@
     bindQuoteField("customToolingCost", "customToolingCost", Number);
     bindQuoteField("customToolingPercent", "customToolingPercent", Number);
     bindQuoteField("material", "material");
+    document.getElementById("showMultipleQuantities").addEventListener("change", event => {
+      quote.showMultipleQuantities = event.target.checked;
+      renderQuote();
+    });
     document.querySelectorAll(".info-button").forEach(button => {
       const resetDismissed = () => {
         if (button.getAttribute("aria-expanded") !== "true") delete button.dataset.tooltipDismissed;
@@ -1225,6 +1356,8 @@
       const key = input.dataset.key;
       stock[key] = key === "inStock" ? input.checked : key === "material" || key === "unit" ? input.value : numberOrZero(input.value);
       persistConfig();
+      document.getElementById("materialRemovalRates").replaceChildren();
+      renderMaterialRemovalRates();
       renderMaterials();
       renderQuote();
     });
@@ -1244,6 +1377,20 @@
         persistConfig();
         renderQuote();
       });
+    });
+    document.getElementById("materialRemovalRates").addEventListener("input", event => {
+      const input = event.target.closest("[data-material-removal-rate]");
+      if (!input) return;
+      const rate = Number(input.value);
+      if (!Number.isFinite(rate) || rate <= 0) {
+        input.setCustomValidity("Enter a rate greater than zero.");
+        input.reportValidity();
+        return;
+      }
+      input.setCustomValidity("");
+      config.materialRemovalRates[input.dataset.materialRemovalRate] = rate;
+      persistConfig();
+      renderQuote();
     });
     document.getElementById("addStock").addEventListener("click", () => {
       config.stock.push({
@@ -1348,7 +1495,7 @@
       if (quote.externalThreadsEnabled) features.push(`${quote.externalThreadsCount} external thread(s)`);
       if (quote.secondOpsEnabled) features.push(`${quote.secondOpsCount} second operation(s)`);
       const lines = [
-        `Estimate${quote.customer ? ` for ${quote.customer}` : ""}`,
+        `${ensureEstimateNumber()}${quote.customer ? ` — Estimate for ${quote.customer}` : " — Estimate"}`,
         `Part: ${quote.partName || "Unnamed part"} | Quantity: ${quantity}`,
         `Finished size: ${quote.length || "?"} × ${quote.width || "?"} × ${quote.thickness || "?"} ${quote.unit}`,
         `Stock allowance: length +${numberOrZero(quote.lengthAllowancePercent)}%; width and thickness cleanup ${numberOrZero(quote.cleanupAllowanceMm)} mm per side`,
@@ -1384,6 +1531,7 @@
       const printValues = {
         printDate: new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" })
           .format(new Date()).replace(/ /g, "-"),
+        printEstimateNumber: ensureEstimateNumber(),
         printCustomer: quote.customer || "—",
         printPartName: quote.partName || "Unnamed part",
         printQuantity: `${quantity} ${quantity === 1 ? "pc" : "pcs"}`,
@@ -1413,6 +1561,26 @@
         document.getElementById(id).textContent = value;
       });
       document.getElementById("printCustomToolingRow").hidden = !quote.customToolingEnabled;
+      const quantityOptionsSection = document.getElementById("printQuantityOptionsSection");
+      const quantityOptionsRows = document.getElementById("printQuantityOptionsRows");
+      quantityOptionsSection.hidden = !quote.showMultipleQuantities || !quoteReady;
+      quantityOptionsRows.replaceChildren();
+      if (!quantityOptionsSection.hidden) {
+        const quantities = [...new Set([...ESTIMATE_QUANTITIES, quantity])].sort((a, b) => a - b);
+        const rows = document.createDocumentFragment();
+        quantities.forEach(optionQuantity => {
+          const totals = estimateQuoteTotals(optionQuantity, stock);
+          const row = document.createElement("tr");
+          if (optionQuantity === quantity) row.classList.add("selected-quantity");
+          [optionQuantity, money(totals.total / optionQuantity), money(totals.total)].forEach(value => {
+            const cell = document.createElement("td");
+            cell.textContent = value;
+            row.append(cell);
+          });
+          rows.append(row);
+        });
+        quantityOptionsRows.append(rows);
+      }
       const printImage = document.getElementById("printPartImage");
       printImage.hidden = !quote.partImage;
       document.getElementById("printOverview").classList.toggle("has-image", Boolean(quote.partImage));
@@ -1467,12 +1635,14 @@
       quote = clone(DEFAULT_QUOTE);
       localStorage.removeItem(QUOTE_KEY);
       applyQuoteToForm();
+      ensureEstimateNumber();
       renderPartImage();
       document.getElementById("partImageStatus").textContent = "";
     });
 
     renderSettings();
     applyQuoteToForm();
+    ensureEstimateNumber();
     renderPartImage();
   </script>
 </body>
