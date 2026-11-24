@@ -299,7 +299,6 @@
     .total-value { margin-top: 3px; color: var(--accent); font: 700 2rem "JetBrains Mono", monospace; letter-spacing: -.06em; }
     .unit-price { margin-top: 4px; color: var(--muted); font-size: .74rem; }
     .quote-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 14px; }
-    .quote-actions .export-pdf { grid-column: 1 / -1; }
     .quote-actions .button { min-height: 36px; padding: 6px 9px; }
     .print-document { display: none; }
     .button {
@@ -567,7 +566,6 @@
             <div class="quote-line subtle"><span>Estimate includes</span><span id="featureSummary">No features selected</span></div>
             <label class="multiple-quantity-toggle"><input id="showMultipleQuantities" type="checkbox">Show multiple qty's on estimate</label>
             <div class="quote-actions">
-              <button id="copyQuote" class="button" type="button">Copy Summary</button>
               <button id="newQuote" class="button" type="button">New quote</button>
               <button id="exportPdf" class="button export-pdf primary" type="button">Export PDF</button>
             </div>
@@ -1477,36 +1475,6 @@
       }
     });
 
-    function quoteSummary() {
-      const stock = config.stock.find(item => item.id === quote.stockId);
-      const quantity = Math.max(1, Math.floor(numberOrZero(quote.quantity) || 1));
-      const pitaFactor = Math.min(PITA_MAX, Math.max(0, numberOrZero(quote.pitaFactor)));
-      const pitaPercent = Math.round(pitaFactor * PITA_RATE_PER_LEVEL * 100);
-      const tooling = customToolingSplit();
-      const features = [];
-      if (quote.holesEnabled) features.push(`${quote.holesCount} drilled hole(s)`);
-      if (quote.threadsEnabled) features.push(`${quote.threadsCount} threaded hole(s)`);
-      if (quote.hexEnabled) features.push(`${quote.hexCount} hex socket(s)`);
-      if (quote.externalThreadsEnabled) features.push(`${quote.externalThreadsCount} external thread(s)`);
-      if (quote.secondOpsEnabled) features.push(`${quote.secondOpsCount} second operation(s)`);
-      const lines = [
-        `${ensureEstimateNumber()}${quote.customer ? ` — Estimate for ${quote.customer}` : " — Estimate"}`,
-        `Part: ${quote.partName || "Unnamed part"} | Quantity: ${quantity}`,
-        `Finished size: ${quote.length || "?"} × ${quote.width || "?"} × ${quote.thickness || "?"} ${quote.unit}`,
-        `Stock allowance: length +${numberOrZero(quote.lengthAllowancePercent)}%; width and thickness cleanup ${numberOrZero(quote.cleanupAllowanceMm)} mm per side`,
-        `Material: ${quote.material || "Not selected"}`,
-        `Stock: ${stock ? `${formatStock(stock)}; ${requiredStockLength().toFixed(2)} ${quote.unit} used, ${money(stockMaterialCostPerPart(stock))} material per part (${money(numberOrZero(stock.price))} per ${stock.length} ${stock.unit || "in"})` : "No matching stock selected"}`,
-        `Rush: ${quote.rushEnabled ? `Yes (+${numberOrZero(config.rates.rushPercent)}%)` : "No"}`,
-        `Custom tooling: ${quote.customToolingEnabled ? `${money(tooling.amount)}; customer pays ${tooling.percent}% (${money(tooling.customer)}), Pinner pays ${money(tooling.pinner)}` : "No"}`,
-        `Features: ${features.join(", ") || "None specified"}`,
-        `PITA factor: ${pitaFactor}/${PITA_MAX} (+${pitaPercent}% on labor only)`,
-        `Notes: ${quote.notes || "None"}`,
-        `Estimated total: ${document.getElementById("totalCost").textContent} (${document.getElementById("unitPrice").textContent})`,
-        "Estimate only; verify material, tolerances, finish, and shop pricing before quoting."
-      ];
-      return lines.join("\n");
-    }
-
     function renderPrintDocument() {
       const stock = config.stock.find(item => item.id === quote.stockId);
       const quantity = Math.max(1, Math.floor(numberOrZero(quote.quantity) || 1));
@@ -1609,15 +1577,6 @@
       persistQuote();
     });
 
-    document.getElementById("copyQuote").addEventListener("click", async event => {
-      try {
-        await navigator.clipboard.writeText(quoteSummary());
-        event.target.textContent = "Copied!";
-        setTimeout(() => {         event.target.textContent = "Copy Summary"; }, 1500);
-      } catch (error) {
-        window.prompt("Copy Summary:", quoteSummary());
-      }
-    });
     document.getElementById("newQuote").addEventListener("click", () => {
       if (!window.confirm("Start a new quote? This clears the current draft on this device.")) return;
       quote = clone(DEFAULT_QUOTE);
