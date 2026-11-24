@@ -117,7 +117,7 @@
     }
     .field-label-with-info {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 6px;
       margin: 0 0 6px;
       color: #cbd5e1;
@@ -319,13 +319,15 @@
     .settings-content { margin-top: 14px; }
     .settings-note { margin: 0 0 12px; color: var(--muted); font-size: .7rem; }
     .settings-group-title { margin: 16px 0 8px; color: #cbd5e1; font-size: .72rem; font-weight: 800; }
+    .settings-group-heading { display: flex; align-items: center; gap: 6px; margin: 16px 0 8px; }
+    .settings-group-heading .settings-group-title { margin: 0; }
     .stock-table-wrap { overflow-x: auto; }
     .stock-table { width: 100%; min-width: 640px; table-layout: fixed; border-collapse: separate; border-spacing: 0 5px; }
-    .stock-table .stock-material-column { width: 30%; }
+    .stock-table .stock-material-column { width: 33%; }
     .stock-table .stock-length-column { width: 11%; }
     .stock-table .stock-dimension-column { width: 9%; }
     .stock-table .stock-unit-column { width: 10%; }
-    .stock-table .stock-price-column { width: 15%; }
+    .stock-table .stock-price-column { width: 12%; }
     .stock-table .stock-availability-column { width: 10%; }
     .stock-table .stock-action-column { width: 6%; }
     .stock-table th { padding: 0 5px 3px; color: var(--muted); font-size: .61rem; font-weight: 700; text-align: left; }
@@ -600,7 +602,7 @@
                       <col class="stock-availability-column">
                       <col class="stock-action-column">
                     </colgroup>
-                    <thead><tr><th>Material / stock</th><th>Length</th><th>Width</th><th>Thick.</th><th>Unit</th><th>Price / blank</th><th>In stock</th><th></th></tr></thead>
+                    <thead><tr><th>Material / stock</th><th>Length</th><th>Width</th><th>Thick.</th><th>Unit</th><th>Price</th><th>In stock</th><th></th></tr></thead>
                     <tbody id="stockRows"></tbody>
                   </table>
                 </div>
@@ -610,8 +612,10 @@
                   <button id="importCatalog" class="button" type="button">Import catalog CSV</button>
                   <input id="catalogFile" class="hidden-file" type="file" accept=".csv,text/csv">
                 </div>
-                <div class="settings-group-title">Material removal rates</div>
-                <p class="settings-note">One provisional rate per exact material name. Cycle time uses rectangular stock volume removed ÷ this rate, plus selected feature times. Calibrate each example rate with completed shop jobs.</p>
+                <div class="settings-group-heading">
+                  <div class="settings-group-title">Material removal rates</div>
+                  <button class="info-button" type="button" aria-label="Material removal rates help" aria-describedby="materialRemovalRatesHelp" aria-expanded="false">i<span id="materialRemovalRatesHelp" class="info-tooltip" role="tooltip">One provisional rate per exact material name. Cycle time uses rectangular stock volume removed ÷ this rate, plus selected feature times. Calibrate each example rate with completed shop jobs.</span></button>
+                </div>
                 <div id="materialRemovalRates" class="rate-grid"></div>
                 <div class="settings-group-title">Shop Parameters</div>
                 <div class="rate-grid">
@@ -627,7 +631,7 @@
                   <div class="field">
                     <div class="field-label-with-info">
                       <label for="learningDecayRate"><span>Learning Decay Rate</span><span class="field-unit">per part</span></label>
-                      <button class="info-button" type="button" aria-label="Learning decay rate help" aria-describedby="learningDecayHelp" aria-expanded="false">i<span id="learningDecayHelp" class="info-tooltip" role="tooltip">How quickly the first-article slowdown disappears on subsequent parts; higher values make it drop faster.<br><br><strong>Examples:</strong><span class="tooltip-example">&bull; <strong>1:</strong> Each additional part leaves about 37% of the previous extra-time penalty (not 1%).</span><span class="tooltip-example">&bull; <strong>1.1:</strong> Reaches normal cycle speed by Part #4.</span><span class="tooltip-example">&bull; <strong>0.4:</strong> Takes about 8 parts to reach normal cycle speed.</span></span></button>
+                      <button class="info-button" type="button" aria-label="Learning decay rate help" aria-describedby="learningDecayHelp" aria-expanded="false">i<span id="learningDecayHelp" class="info-tooltip" role="tooltip">How quickly the first-article slowdown disappears on later parts; higher values make it drop faster.<br><br><strong>Examples:</strong><span class="tooltip-example">&bull; <strong>2:</strong> Drops off fast — nearly at full production speed by <strong>Part #2–3</strong>.</span><span class="tooltip-example">&bull; <strong>1:</strong> Balanced ramp — reaches full production speed by <strong>Part #4</strong>.</span><span class="tooltip-example">&bull; <strong>0.5:</strong> Gradual ramp — takes about <strong>7 parts</strong> to reach full production speed.</span></span></button>
                     </div>
                     <input id="learningDecayRate" type="number" min="0" step="any" aria-describedby="learningDecayHelp">
                   </div>
