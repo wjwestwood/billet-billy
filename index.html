@@ -115,8 +115,65 @@
       font-size: .73rem;
       font-weight: 700;
     }
+    .field-label-with-info {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0 0 6px;
+      color: #cbd5e1;
+      font-size: .73rem;
+      font-weight: 700;
+    }
+    .field-label-with-info label { margin: 0; color: inherit; font-size: inherit; font-weight: inherit; }
+    .info-button {
+      position: relative;
+      display: grid;
+      flex: 0 0 16px;
+      place-items: center;
+      width: 16px;
+      height: 16px;
+      padding: 0;
+      border: 1px solid #64748b;
+      border-radius: 50%;
+      background: #253347;
+      color: #cbd5e1;
+      font: 700 .65rem/1 "JetBrains Mono", monospace;
+    }
+    .info-button:hover, .info-button:focus-visible { border-color: var(--primary); color: var(--primary); }
+    .info-tooltip {
+      position: fixed;
+      z-index: 30;
+      top: 0;
+      left: 0;
+      width: min(290px, calc(100vw - 40px));
+      max-height: calc(100vh - 16px);
+      box-sizing: border-box;
+      padding: 10px 12px;
+      border: 1px solid #475569;
+      border-radius: 8px;
+      background: #0f172a;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .4);
+      color: #e2e8f0;
+      font: 400 .72rem/1.45 "Plus Jakarta Sans", sans-serif;
+      text-align: left;
+      white-space: normal;
+      overflow-y: auto;
+      visibility: hidden;
+      opacity: 0;
+      pointer-events: auto;
+      transition: opacity .15s, visibility .15s;
+    }
+    .tooltip-example { display: block; padding-left: .9em; text-indent: -.9em; }
+    .info-button:hover:not([data-tooltip-dismissed="true"]) .info-tooltip,
+    .info-button:focus:not([data-tooltip-dismissed="true"]) .info-tooltip,
+    .info-button[aria-expanded="true"] .info-tooltip { visibility: visible; opacity: 1; }
     .rush-toggle { display: flex; align-items: center; gap: 8px; min-height: 40px; color: #cbd5e1; font-size: .78rem; font-weight: 700; cursor: pointer; }
     .rush-toggle input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+    .rush-control { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; min-height: 40px; }
+    .rush-rate-field { display: flex; align-items: center; gap: 8px; width: auto; }
+    .rush-rate-field[hidden] { display: none; }
+    .rush-rate-field label { margin: 0; white-space: nowrap; }
+    .rush-rate-field input { width: 84px; }
     .optional { color: #64748b; font-size: .67rem; font-weight: 500; }
     input, select {
       width: 100%;
@@ -232,6 +289,8 @@
     .quote-line { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 12px; color: #cbd5e1; font-size: .78rem; }
     .quote-line span:last-child { color: var(--text); font: 600 .77rem "JetBrains Mono", monospace; text-align: right; }
     .quote-line.subtle { color: var(--muted); font-size: .7rem; }
+    .quote-line[hidden], .custom-tooling-fields[hidden], #printCustomToolingRow[hidden] { display: none; }
+    .custom-tooling-fields { margin-top: 12px; }
     .quote-divider { height: 1px; margin: 16px 0; background: var(--card-border); }
     .total-label { color: var(--muted); font-size: .69rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
     .total-value { margin-top: 3px; color: var(--accent); font: 700 2rem "JetBrains Mono", monospace; letter-spacing: -.06em; }
@@ -357,7 +416,13 @@
               <label for="material">Material</label>
               <select id="material"></select>
             </div>
-            <label class="rush-toggle" for="rushEnabled"><input id="rushEnabled" type="checkbox">Rush</label>
+            <div class="rush-control">
+              <label class="rush-toggle" for="rushEnabled"><input id="rushEnabled" type="checkbox">Rush</label>
+              <div id="rushRateField" class="field rush-rate-field" hidden>
+                <label for="rushPercent">Rush surcharge (%)</label>
+                <input id="rushPercent" type="number" min="0" step="any">
+              </div>
+            </div>
           </div>
         </section>
 
@@ -377,11 +442,11 @@
               <input id="thickness" type="number" min="0" step="any" placeholder="0.00" inputmode="decimal">
             </div>
             <div class="dimension-unit" role="group" aria-label="Dimension units">
-              <button class="unit-button" type="button" data-unit="in" aria-pressed="true">IN</button>
-              <button class="unit-button" type="button" data-unit="mm" aria-pressed="false">MM</button>
+              <button class="unit-button" type="button" data-unit="mm" aria-pressed="true">MM</button>
+              <button class="unit-button" type="button" data-unit="in" aria-pressed="false">IN</button>
             </div>
           </div>
-          <p class="hint">Extra length is a percentage of the finished length. Cleanup adds material on each side of the width and thickness.</p>
+          <p class="hint">For round parts, thickness follows width until edited manually. Extra length is a percentage of the finished length. Cleanup adds material on each side of the width and thickness.</p>
           <div class="grid three stock-allowance-grid" style="margin-top:13px">
             <div class="field">
               <label for="lengthAllowancePercent">Length allowance <span class="optional">(%)</span></label>
@@ -430,9 +495,28 @@
           </div>
         </section>
 
+        <section class="card" aria-labelledby="tooling-heading">
+          <div class="section-heading"><span class="section-number">04</span><h2 id="tooling-heading">Custom Tooling</h2></div>
+          <label class="feature-name" for="customToolingEnabled">
+            <input id="customToolingEnabled" type="checkbox">
+            <span>Custom Tooling<small>Charge a share of one-time tooling cost</small></span>
+          </label>
+          <div id="customToolingFields" class="grid custom-tooling-fields" hidden>
+            <div class="field">
+              <label for="customToolingCost">Tooling cost ($)</label>
+              <input id="customToolingCost" type="number" min="0" step="any" inputmode="decimal">
+            </div>
+            <div class="field">
+              <label for="customToolingPercent">Customer pays (%)</label>
+              <input id="customToolingPercent" type="number" min="0" max="100" step="any" inputmode="decimal">
+            </div>
+          </div>
+          <p class="hint">Only the customer-paid share is added to the estimate; Pinner covers the remainder.</p>
+        </section>
+
         <section class="card" aria-labelledby="pita-heading">
           <div class="section-heading">
-            <span class="section-number">04</span>
+            <span class="section-number">05</span>
             <h2 id="pita-heading">PITA Factor</h2>
             <output id="pitaFactorValue" class="pita-value" for="pitaFactor">+0%</output>
           </div>
@@ -463,8 +547,9 @@
             <div class="quote-line"><span>Stock material</span><span id="materialCost">$0.00</span></div>
             <div class="quote-line"><span>Machining labor</span><span id="laborCost">$0.00</span></div>
             <div class="quote-line"><span id="rushLineLabel">Rush surcharge (off)</span><span id="rushCost">$0.00</span></div>
+            <div id="customToolingLine" class="quote-line" hidden><span id="customToolingLineLabel">Custom tooling</span><span id="customToolingLineCost">$0.00</span></div>
             <div class="quote-line"><span id="pitaLineLabel">PITA adjustment (0%)</span><span id="pitaCost">$0.00</span></div>
-            <div class="quote-line subtle"><span id="laborDetail">Setup + cycle time</span><span id="laborMinutes">0 min</span></div>
+            <div class="quote-line subtle"><span>Setup</span><span id="setupTimeSummary">0 min</span></div>
             <div class="quote-line"><span>Quantity</span><span id="quoteQuantity">1 pc</span></div>
             <div class="quote-divider"></div>
             <div class="total-label">Estimated total</div>
@@ -497,17 +582,75 @@
                 <div class="settings-group-title">Shop estimate inputs</div>
                 <div class="rate-grid">
                   <div class="field"><label for="hourlyRate">Shop rate ($ / hour)</label><input id="hourlyRate" type="number" min="0" step="any"></div>
-                  <div class="field"><label for="rushPercent">Rush surcharge (%)</label><input id="rushPercent" type="number" min="0" step="any"></div>
                   <div class="field"><label for="setupMinutes">Setup time (minutes / job)</label><input id="setupMinutes" type="number" min="0" step="1"></div>
-                  <div class="field"><label for="cycleMinutes">Base cycle time (minutes / part)</label><input id="cycleMinutes" type="number" min="0" step="1"></div>
-                  <div class="field"><label for="holeMinutes">Minutes / drilled hole</label><input id="holeMinutes" type="number" min="0" step="any"></div>
-                  <div class="field"><label for="threadMinutes">Minutes / threaded hole</label><input id="threadMinutes" type="number" min="0" step="any"></div>
-                  <div class="field"><label for="externalThreadMinutes">Minutes / external thread</label><input id="externalThreadMinutes" type="number" min="0" step="any"></div>
-                  <div class="field"><label for="hexMinutes">Minutes / hex socket</label><input id="hexMinutes" type="number" min="0" step="any"></div>
+                  <div class="field">
+                    <div class="field-label-with-info">
+                      <label for="cycleMinutes">Base cycle time (minutes / part)</label>
+                      <button class="info-button" type="button" aria-label="Base cycle time help" aria-describedby="cycleMinutesHelp" aria-expanded="false">i<span id="cycleMinutesHelp" class="info-tooltip" role="tooltip">This is the normal machining cycle per part before the first-article penalty and batch speedup are applied.<br><br><strong>Example:</strong> A 30 min base cycle with a 150% first-article penalty takes <strong>75 min</strong> for Part #1. Setup time is added once per job.</span></button>
+                    </div>
+                    <input id="cycleMinutes" type="number" min="0" step="1" aria-describedby="cycleMinutesHelp">
+                  </div>
+                  <div class="field">
+                    <div class="field-label-with-info">
+                      <label for="firstArticlePenaltyPercent">First-Article Penalty (%)</label>
+                      <button class="info-button" type="button" aria-label="First-article penalty help" aria-describedby="firstArticlePenaltyHelp" aria-expanded="false">i<span id="firstArticlePenaltyHelp" class="info-tooltip" role="tooltip">Extra cycle time added to Part #1 for proving out feeds, speeds, and offsets before hitting full speed.<br><br><strong>Examples:</strong><span class="tooltip-example">&bull; <strong>150%:</strong> A 20 min part takes <strong>50 min</strong> for piece #1, then tapers down.</span><span class="tooltip-example">&bull; <strong>100%:</strong> Part #1 takes twice the base cycle time (a 20 min part takes 40 min).</span><span class="tooltip-example">&bull; <strong>0%:</strong> No prove-out slowdown; Part #1 runs at base cycle time.</span></span></button>
+                    </div>
+                    <input id="firstArticlePenaltyPercent" type="number" min="0" step="any" aria-describedby="firstArticlePenaltyHelp">
+                  </div>
+                  <div class="field">
+                    <div class="field-label-with-info">
+                      <label for="learningDecayRate">Learning Decay Rate</label>
+                      <button class="info-button" type="button" aria-label="Learning decay rate help" aria-describedby="learningDecayHelp" aria-expanded="false">i<span id="learningDecayHelp" class="info-tooltip" role="tooltip">How quickly the first-article slowdown disappears on subsequent parts; higher values make it drop faster.<br><br><strong>Examples:</strong><span class="tooltip-example">&bull; <strong>1:</strong> Each additional part leaves about 37% of the previous extra-time penalty (not 1%).</span><span class="tooltip-example">&bull; <strong>1.1:</strong> Reaches normal cycle speed by Part #4.</span><span class="tooltip-example">&bull; <strong>0.4:</strong> Takes about 8 parts to reach normal cycle speed.</span></span></button>
+                    </div>
+                    <input id="learningDecayRate" type="number" min="0" step="any" aria-describedby="learningDecayHelp">
+                  </div>
+                  <div class="field">
+                    <div class="field-label-with-info">
+                      <label for="maxBatchSpeedupPercent">Max Batch Speedup (%)</label>
+                      <button class="info-button" type="button" aria-label="Maximum batch speedup help" aria-describedby="maxBatchSpeedupHelp" aria-expanded="false">i<span id="maxBatchSpeedupHelp" class="info-tooltip" role="tooltip">Maximum cycle-time discount on large production runs once toolpaths and fixtures are dialed in.<br><br><strong>Examples:</strong><span class="tooltip-example">&bull; <strong>20%:</strong> A 20 min part bottoms out at <strong>16 min</strong> on high-volume orders.</span><span class="tooltip-example">&bull; <strong>0%:</strong> No batch-speedup discount; first-article learning can still reduce cycle time.</span></span></button>
+                    </div>
+                    <input id="maxBatchSpeedupPercent" type="number" min="0" max="100" step="any" aria-describedby="maxBatchSpeedupHelp">
+                  </div>
+                  <div class="field">
+                    <div class="field-label-with-info">
+                      <label for="batchSpeedupHalfLifeQty">Batch Speedup Half-Life (Qty)</label>
+                      <button class="info-button" type="button" aria-label="Batch speedup half-life help" aria-describedby="batchSpeedupHalfLifeHelp" aria-expanded="false">i<span id="batchSpeedupHalfLifeHelp" class="info-tooltip" role="tooltip">Sets how quickly volume cycle-time discounts kick in as order size grows.<br><br><strong>Examples:</strong><span class="tooltip-example">&bull; <strong>15 pcs:</strong> Hits half of max speedup at Qty 16, and near-full speedup by Qty 45–60.</span><span class="tooltip-example">&bull; <strong>5 pcs:</strong> Discounts ramp up quickly on small batches (10–15 pcs).</span><span class="tooltip-example">&bull; <strong>40 pcs:</strong> Discounts are reserved for large production runs (100+ pcs).</span></span></button>
+                    </div>
+                    <input id="batchSpeedupHalfLifeQty" type="number" min="0.1" step="any" aria-describedby="batchSpeedupHalfLifeHelp">
+                  </div>
+                  <div class="field">
+                    <div class="field-label-with-info">
+                      <label for="holeMinutes">Drilled hole (minutes/mm)</label>
+                      <button class="info-button" type="button" aria-label="Drilled-hole rate help" aria-describedby="holeMinutesHelp" aria-expanded="false">i<span id="holeMinutesHelp" class="info-tooltip" role="tooltip">Minutes/mm is multiplied by finished part length in millimeters and the number of drilled holes.<br><br><strong>Example:</strong> 0.05 min/mm × 100 mm × 2 holes = 10 min/part.</span></button>
+                    </div>
+                    <input id="holeMinutes" type="number" min="0" step="any" aria-describedby="holeMinutesHelp">
+                  </div>
+                  <div class="field">
+                    <div class="field-label-with-info">
+                      <label for="threadMinutes">Threaded hole (minutes/mm)</label>
+                      <button class="info-button" type="button" aria-label="Threaded-hole rate help" aria-describedby="threadMinutesHelp" aria-expanded="false">i<span id="threadMinutesHelp" class="info-tooltip" role="tooltip">Minutes/mm is multiplied by finished part length in millimeters and the number of threaded holes.<br><br><strong>Example:</strong> 0.05 min/mm × 100 mm × 2 threaded holes = 10 min/part.</span></button>
+                    </div>
+                    <input id="threadMinutes" type="number" min="0" step="any" aria-describedby="threadMinutesHelp">
+                  </div>
+                  <div class="field">
+                    <div class="field-label-with-info">
+                      <label for="externalThreadMinutes">External thread (minutes/mm)</label>
+                      <button class="info-button" type="button" aria-label="External-thread rate help" aria-describedby="externalThreadMinutesHelp" aria-expanded="false">i<span id="externalThreadMinutesHelp" class="info-tooltip" role="tooltip">Minutes/mm is multiplied by finished part length in millimeters and the number of external threads.<br><br><strong>Example:</strong> 0.05 min/mm × 100 mm × 2 external threads = 10 min/part.</span></button>
+                    </div>
+                    <input id="externalThreadMinutes" type="number" min="0" step="any" aria-describedby="externalThreadMinutesHelp">
+                  </div>
+                  <div class="field">
+                    <div class="field-label-with-info">
+                      <label for="hexMinutes">Hex socket (minutes/mm)</label>
+                      <button class="info-button" type="button" aria-label="Hex-socket rate help" aria-describedby="hexMinutesHelp" aria-expanded="false">i<span id="hexMinutesHelp" class="info-tooltip" role="tooltip">Minutes/mm is multiplied by finished part length in millimeters and the number of hex sockets.<br><br><strong>Example:</strong> 0.05 min/mm × 100 mm × 2 hex sockets = 10 min/part.</span></button>
+                    </div>
+                    <input id="hexMinutes" type="number" min="0" step="any" aria-describedby="hexMinutesHelp">
+                  </div>
                   <div class="field"><label for="secondOpMinutes">Minutes / second operation</label><input id="secondOpMinutes" type="number" min="0" step="any"></div>
                 </div>
                 <div class="settings-actions"><button id="resetConfig" class="button" type="button">Restore example data</button></div>
-                <p class="footer-note">Material is prorated by stock length used (finished part length plus length allowance) × quantity. PITA is applied to labor only; Rush is applied to the material and labor subtotal. Scrap/reuse, finishing, tax, and special tooling are not included.</p>
+                <p class="footer-note">Drilled-hole, thread, and hex-socket rates are multiplied by finished part length in millimeters; second-operation time remains per operation.</p>
+                <p class="footer-note">Material is prorated by stock length used (finished part length plus length allowance) × quantity. Custom tooling is charged at the customer-paid share; PITA applies to labor only, and Rush to material and labor. Scrap/reuse, finishing, tax, and other special tooling are not included.</p>
               </div>
             </details>
           </div>
@@ -548,11 +691,12 @@
           <tr><th scope="row">Stock material</th><td id="printMaterialCost"></td></tr>
           <tr><th scope="row" id="printLaborLabel">Machining Labour</th><td id="printLaborCost"></td></tr>
           <tr><th scope="row" id="printRushLabel"></th><td id="printRushCost"></td></tr>
+          <tr id="printCustomToolingRow" hidden><th scope="row" id="printCustomToolingLabel">Custom tooling</th><td id="printCustomToolingCost"></td></tr>
           <tr class="print-total"><th scope="row">Estimated total</th><td id="printTotal"></td></tr>
         </tbody>
       </table>
       <p id="printUnitPrice" class="print-unit-price"></p>
-      <p class="print-disclaimer">Estimate only. Verify material, tolerances, finish, and shop pricing before quoting. Estimate excludes scrap/reuse, finishing, tax, and special tooling.</p>
+      <p class="print-disclaimer">Estimate only. Verify material, tolerances, finish, and shop pricing before quoting. Estimate excludes scrap/reuse, finishing, tax, and other special tooling.</p>
     </section>
   </main>
 
@@ -572,14 +716,16 @@
       ],
       rates: {
         hourlyRate: 85, rushPercent: 20, setupMinutes: 30, cycleMinutes: 20, holeMinutes: 3, threadMinutes: 8,
-        externalThreadMinutes: 8, hexMinutes: 6, secondOpMinutes: 20
+        externalThreadMinutes: 8, hexMinutes: 6, secondOpMinutes: 20, firstArticlePenaltyPercent: 150,
+        learningDecayRate: 1.1, maxBatchSpeedupPercent: 20, batchSpeedupHalfLifeQty: 15
       }
     };
     const DEFAULT_QUOTE = {
       customer: "", partName: "", quantity: 1, material: "6061 Aluminum",
-      length: "", width: "", thickness: "", unit: "in", lengthAllowancePercent: 10,
+      length: "", width: "", thickness: "", thicknessAutoFilled: null, unit: "mm", unitExplicit: false, lengthAllowancePercent: 10,
       cleanupAllowanceMm: 1, stockId: "",
       rushEnabled: false, holesEnabled: false, holesCount: 1, threadsEnabled: false, threadsCount: 1, pitaFactor: 0,
+      customToolingEnabled: false, customToolingCost: 0, customToolingPercent: 100,
       hexEnabled: false, hexCount: 1, externalThreadsEnabled: false, externalThreadsCount: 1,
       secondOpsEnabled: false, secondOpsCount: 1, notes: "", partImage: ""
     };
@@ -609,7 +755,17 @@
         if (saved && typeof saved === "object") {
           const partImage = typeof saved.partImage === "string" &&
             /^data:image\/(png|jpeg|webp|gif);base64,/.test(saved.partImage) ? saved.partImage : "";
-          return { ...DEFAULT_QUOTE, ...saved, partImage };
+          const quote = { ...DEFAULT_QUOTE, ...saved, partImage };
+          if (saved.unit === "in" && !saved.unitExplicit) {
+            ["length", "width", "thickness"].forEach(key => {
+              if (quote[key] === "" || quote[key] == null) return;
+              const value = Number(quote[key]);
+              if (Number.isFinite(value)) quote[key] = Number(convert(value, "in", "mm").toFixed(4));
+            });
+            quote.unit = "mm";
+            quote.unitExplicit = true;
+          }
+          return quote;
         }
       } catch (error) {
         console.warn("Could not load the saved draft quote.", error);
@@ -739,15 +895,37 @@
       return stockLength > 0 ? numberOrZero(stock.price) * requiredStockLength() / stockLength : 0;
     }
 
+    function customToolingSplit() {
+      const amount = numberOrZero(quote.customToolingCost);
+      const percent = Math.min(100, numberOrZero(quote.customToolingPercent));
+      const customer = quote.customToolingEnabled ? amount * percent / 100 : 0;
+      return { amount, percent, customer, pinner: quote.customToolingEnabled ? amount - customer : 0 };
+    }
+
     function estimateLabor(quantity) {
+      const lengthScaledMinutes = (minutesPerMm, count) =>
+        numberOrZero(minutesPerMm) * numberOrZero(count) *
+        convert(numberOrZero(quote.length), quote.unit, "mm");
       const featureMinutes =
-        (quote.holesEnabled ? numberOrZero(quote.holesCount) * numberOrZero(config.rates.holeMinutes) : 0) +
-        (quote.threadsEnabled ? numberOrZero(quote.threadsCount) * numberOrZero(config.rates.threadMinutes) : 0) +
-        (quote.hexEnabled ? numberOrZero(quote.hexCount) * numberOrZero(config.rates.hexMinutes) : 0) +
-        (quote.externalThreadsEnabled ? numberOrZero(quote.externalThreadsCount) * numberOrZero(config.rates.externalThreadMinutes) : 0) +
+        (quote.holesEnabled ? lengthScaledMinutes(config.rates.holeMinutes, quote.holesCount) : 0) +
+        (quote.threadsEnabled ? lengthScaledMinutes(config.rates.threadMinutes, quote.threadsCount) : 0) +
+        (quote.hexEnabled ? lengthScaledMinutes(config.rates.hexMinutes, quote.hexCount) : 0) +
+        (quote.externalThreadsEnabled ? lengthScaledMinutes(config.rates.externalThreadMinutes, quote.externalThreadsCount) : 0) +
         (quote.secondOpsEnabled ? numberOrZero(quote.secondOpsCount) * numberOrZero(config.rates.secondOpMinutes) : 0);
-      const cycle = numberOrZero(config.rates.cycleMinutes) + featureMinutes;
-      const totalMinutes = numberOrZero(config.rates.setupMinutes) + cycle * quantity;
+      const baseCycleMinutes = numberOrZero(config.rates.cycleMinutes) + featureMinutes;
+      const firstArticlePenaltyPercent = numberOrZero(config.rates.firstArticlePenaltyPercent);
+      const learningDecayRate = numberOrZero(config.rates.learningDecayRate);
+      const maxBatchSpeedupPercent = numberOrZero(config.rates.maxBatchSpeedupPercent);
+      const batchSpeedupHalfLifeQty = Math.max(0.1, numberOrZero(config.rates.batchSpeedupHalfLifeQty));
+      let totalCycleMinutes = 0;
+      for (let i = 1; i <= quantity; i++) {
+        totalCycleMinutes += baseCycleMinutes *
+          (1 + (firstArticlePenaltyPercent / 100) * Math.exp(-learningDecayRate * (i - 1))) *
+          (1 - (maxBatchSpeedupPercent / 100) *
+            (1 - Math.exp(-0.693 * (i - 1) / batchSpeedupHalfLifeQty)));
+      }
+      const cycle = quantity > 0 ? totalCycleMinutes / quantity : 0;
+      const totalMinutes = numberOrZero(config.rates.setupMinutes) + totalCycleMinutes;
       const cost = totalMinutes * numberOrZero(config.rates.hourlyRate) / 60;
       return { cycle, totalMinutes, cost };
     }
@@ -833,10 +1011,15 @@
       const pitaRate = pitaFactor * PITA_RATE_PER_LEVEL;
       const pitaPercent = Math.round(pitaRate * 100);
       const rushPercent = numberOrZero(config.rates.rushPercent);
+      quote.customToolingCost = numberOrZero(quote.customToolingCost);
+      const tooling = customToolingSplit();
+      quote.customToolingPercent = tooling.percent;
+      document.getElementById("customToolingCost").value = quote.customToolingCost;
+      document.getElementById("customToolingPercent").value = tooling.percent;
       const subtotal = materialCost + laborCost;
       const pitaCost = quoteReady ? laborCost * pitaRate : 0;
       const rushCost = quoteReady && quote.rushEnabled ? subtotal * rushPercent / 100 : 0;
-      const total = subtotal + pitaCost + rushCost;
+      const total = subtotal + pitaCost + rushCost + tooling.customer;
       document.getElementById("pitaFactor").value = pitaFactor;
       document.getElementById("pitaFactor").setAttribute("aria-valuetext", `Level ${pitaFactor} of ${PITA_MAX}; adds ${pitaPercent} percent`);
       document.getElementById("pitaFactorValue").textContent = `+${pitaPercent}%`;
@@ -846,7 +1029,11 @@
       document.getElementById("laborCost").textContent = money(laborCost);
       document.getElementById("rushCost").textContent = money(rushCost);
       document.getElementById("pitaCost").textContent = money(pitaCost);
-      document.getElementById("laborMinutes").textContent = `${laborEstimate.totalMinutes.toFixed(0)} min`;
+      document.getElementById("customToolingLine").hidden = !quote.customToolingEnabled;
+      document.getElementById("customToolingLineLabel").textContent =
+        `Custom tooling (${tooling.percent}%)`;
+      document.getElementById("customToolingLineCost").textContent = money(tooling.customer);
+      document.getElementById("setupTimeSummary").textContent = `${numberOrZero(config.rates.setupMinutes)} min`;
       document.getElementById("quoteQuantity").textContent = `${quantity} ${quantity === 1 ? "pc" : "pcs"}`;
       document.getElementById("totalCost").textContent = quoteReady ? money(total) : "—";
       document.getElementById("unitPrice").textContent = quoteReady
@@ -859,7 +1046,6 @@
       if (quote.externalThreadsEnabled) selectedFeatures.push(`${numberOrZero(quote.externalThreadsCount)} external threads`);
       if (quote.secondOpsEnabled) selectedFeatures.push(`${numberOrZero(quote.secondOpsCount)} second operations`);
       document.getElementById("featureSummary").textContent = selectedFeatures.join(", ") || "No features selected";
-      document.getElementById("laborDetail").textContent = `Setup + ${laborEstimate.cycle.toFixed(0)} min / part`;
       persistQuote();
     }
 
@@ -870,10 +1056,14 @@
     function applyQuoteToForm() {
       ["customer", "partName", "quantity", "length", "width", "thickness", "notes",
         "holesCount", "threadsCount", "hexCount", "externalThreadsCount", "secondOpsCount", "pitaFactor",
+        "customToolingCost", "customToolingPercent",
         "lengthAllowancePercent", "cleanupAllowanceMm"].forEach(key => setInputValue(key, quote[key]));
-      ["rushEnabled", "holesEnabled", "threadsEnabled", "hexEnabled", "externalThreadsEnabled", "secondOpsEnabled"].forEach(key => {
+      ["rushEnabled", "holesEnabled", "threadsEnabled", "hexEnabled", "externalThreadsEnabled", "secondOpsEnabled",
+        "customToolingEnabled"].forEach(key => {
         document.getElementById(key).checked = Boolean(quote[key]);
       });
+      renderCustomToolingFields();
+      renderRushRateField();
       document.querySelectorAll(".unit-button").forEach(button => {
         button.setAttribute("aria-pressed", String(button.dataset.unit === quote.unit));
       });
@@ -886,6 +1076,37 @@
       [["holesEnabled", "holesCountWrap"], ["threadsEnabled", "threadsCountWrap"], ["hexEnabled", "hexCountWrap"],
         ["externalThreadsEnabled", "externalThreadsCountWrap"], ["secondOpsEnabled", "secondOpsCountWrap"]]
         .forEach(([enabled, wrapper]) => document.getElementById(wrapper).classList.toggle("visible", quote[enabled]));
+    }
+
+    function renderRushRateField() {
+      document.getElementById("rushRateField").hidden = !quote.rushEnabled;
+    }
+
+    function renderCustomToolingFields() {
+      document.getElementById("customToolingFields").hidden = !quote.customToolingEnabled;
+    }
+
+    function positionInfoTooltip(button) {
+      const tooltip = button.querySelector(".info-tooltip");
+      const card = button.closest(".quote-card");
+      if (!tooltip || !card) return;
+
+      const cardRect = card.getBoundingClientRect();
+      const buttonRect = button.getBoundingClientRect();
+      const width = Math.max(0, Math.min(290, cardRect.width - 24, window.innerWidth - 32));
+      const left = Math.max(16, Math.min(
+        cardRect.left + (cardRect.width - width) / 2,
+        window.innerWidth - width - 16
+      ));
+      tooltip.style.width = `${width}px`;
+      tooltip.style.left = `${left}px`;
+      tooltip.style.right = "auto";
+      tooltip.style.top = "0px";
+
+      const height = tooltip.getBoundingClientRect().height;
+      const topAbove = buttonRect.top - height - 8;
+      const top = topAbove >= 8 ? topAbove : buttonRect.bottom + 8;
+      tooltip.style.top = `${Math.max(8, Math.min(top, window.innerHeight - height - 8))}px`;
     }
 
     function renderSettings() {
@@ -908,28 +1129,69 @@
 
     function bindQuoteField(id, key, coerce) {
       const element = document.getElementById(id);
-      element.addEventListener("input", () => {
+      const update = () => {
         quote[key] = coerce ? coerce(element.value) : element.value;
+        if (key === "thickness") {
+          quote.thicknessAutoFilled = false;
+        } else if (key === "width" &&
+            (quote.thicknessAutoFilled ||
+             (quote.thicknessAutoFilled == null && (quote.thickness === "" || quote.thickness == null)))) {
+          quote.thickness = element.value;
+          quote.thicknessAutoFilled = true;
+          document.getElementById("thickness").value = element.value;
+        }
         if (key === "quantity") quote.quantity = Math.max(1, Math.floor(numberOrZero(element.value) || 1));
         if (key === "material") quote.stockId = "";
         renderQuote();
-      });
-      element.addEventListener("change", () => {
-        quote[key] = coerce ? coerce(element.value) : element.value;
-        if (key === "material") quote.stockId = "";
-        renderQuote();
-      });
+      };
+      element.addEventListener("input", update);
+      element.addEventListener("change", update);
     }
 
     ["customer", "partName", "quantity", "length", "width", "thickness", "notes",
       "lengthAllowancePercent", "cleanupAllowanceMm",
       "holesCount", "threadsCount", "hexCount", "externalThreadsCount", "secondOpsCount"].forEach(id => bindQuoteField(id, id));
     bindQuoteField("pitaFactor", "pitaFactor", Number);
+    bindQuoteField("customToolingCost", "customToolingCost", Number);
+    bindQuoteField("customToolingPercent", "customToolingPercent", Number);
     bindQuoteField("material", "material");
-    ["rushEnabled", "holesEnabled", "threadsEnabled", "hexEnabled", "externalThreadsEnabled", "secondOpsEnabled"].forEach(id => {
+    document.querySelectorAll(".info-button").forEach(button => {
+      const resetDismissed = () => {
+        if (button.getAttribute("aria-expanded") !== "true") delete button.dataset.tooltipDismissed;
+      };
+      button.addEventListener("mouseenter", () => {
+        if (button.dataset.tooltipDismissed !== "true") positionInfoTooltip(button);
+      });
+      button.addEventListener("focus", () => {
+        if (button.dataset.tooltipDismissed !== "true") positionInfoTooltip(button);
+      });
+      button.addEventListener("mouseleave", resetDismissed);
+      button.addEventListener("blur", resetDismissed);
+      button.addEventListener("click", () => {
+        const open = button.getAttribute("aria-expanded") !== "true";
+        button.setAttribute("aria-expanded", String(open));
+        if (open) {
+          delete button.dataset.tooltipDismissed;
+          positionInfoTooltip(button);
+        } else {
+          button.dataset.tooltipDismissed = "true";
+        }
+      });
+    });
+    const repositionActiveInfoTooltip = () => {
+      const activeButton = document.querySelector(".info-button:hover") ||
+        document.activeElement.closest(".info-button");
+      if (activeButton) positionInfoTooltip(activeButton);
+    };
+    window.addEventListener("resize", repositionActiveInfoTooltip);
+    window.addEventListener("scroll", repositionActiveInfoTooltip, true);
+    ["rushEnabled", "holesEnabled", "threadsEnabled", "hexEnabled", "externalThreadsEnabled", "secondOpsEnabled",
+      "customToolingEnabled"].forEach(id => {
       document.getElementById(id).addEventListener("change", () => {
         quote[id] = document.getElementById(id).checked;
         renderFeatureRows();
+        if (id === "rushEnabled") renderRushRateField();
+        if (id === "customToolingEnabled") renderCustomToolingFields();
         renderQuote();
       });
     });
@@ -949,6 +1211,7 @@
           });
         }
         quote.unit = nextUnit;
+        quote.unitExplicit = true;
         document.querySelectorAll(".unit-button").forEach(item => item.setAttribute("aria-pressed", String(item === button)));
         renderQuote();
       });
@@ -1077,6 +1340,7 @@
       const quantity = Math.max(1, Math.floor(numberOrZero(quote.quantity) || 1));
       const pitaFactor = Math.min(PITA_MAX, Math.max(0, numberOrZero(quote.pitaFactor)));
       const pitaPercent = Math.round(pitaFactor * PITA_RATE_PER_LEVEL * 100);
+      const tooling = customToolingSplit();
       const features = [];
       if (quote.holesEnabled) features.push(`${quote.holesCount} drilled hole(s)`);
       if (quote.threadsEnabled) features.push(`${quote.threadsCount} threaded hole(s)`);
@@ -1091,6 +1355,7 @@
         `Material: ${quote.material || "Not selected"}`,
         `Stock: ${stock ? `${formatStock(stock)}; ${requiredStockLength().toFixed(2)} ${quote.unit} used, ${money(stockMaterialCostPerPart(stock))} material per part (${money(numberOrZero(stock.price))} per ${stock.length} ${stock.unit || "in"})` : "No matching stock selected"}`,
         `Rush: ${quote.rushEnabled ? `Yes (+${numberOrZero(config.rates.rushPercent)}%)` : "No"}`,
+        `Custom tooling: ${quote.customToolingEnabled ? `${money(tooling.amount)}; customer pays ${tooling.percent}% (${money(tooling.customer)}), Pinner pays ${money(tooling.pinner)}` : "No"}`,
         `Features: ${features.join(", ") || "None specified"}`,
         `PITA factor: ${pitaFactor}/${PITA_MAX} (+${pitaPercent}% on labor only)`,
         `Notes: ${quote.notes || "None"}`,
@@ -1109,6 +1374,7 @@
       const laborEstimate = estimateLabor(quantity);
       const laborCost = quoteReady ? laborEstimate.cost : 0;
       const laborPita = laborCost * pitaFactor * PITA_RATE_PER_LEVEL;
+      const tooling = customToolingSplit();
       const features = [];
       if (quote.holesEnabled) features.push(`${numberOrZero(quote.holesCount)} drilled holes`);
       if (quote.threadsEnabled) features.push(`${numberOrZero(quote.threadsCount)} threaded holes`);
@@ -1138,12 +1404,15 @@
         printLaborLabel: "Machining Labour",
         printLaborCost: money(laborCost + laborPita),
         printRushCost: document.getElementById("rushCost").textContent,
+        printCustomToolingLabel: `Custom tooling (${tooling.percent}%)`,
+        printCustomToolingCost: money(tooling.customer),
         printTotal: document.getElementById("totalCost").textContent,
         printUnitPrice: document.getElementById("unitPrice").textContent
       };
       Object.entries(printValues).forEach(([id, value]) => {
         document.getElementById(id).textContent = value;
       });
+      document.getElementById("printCustomToolingRow").hidden = !quote.customToolingEnabled;
       const printImage = document.getElementById("printPartImage");
       printImage.hidden = !quote.partImage;
       document.getElementById("printOverview").classList.toggle("has-image", Boolean(quote.partImage));
