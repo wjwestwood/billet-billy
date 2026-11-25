@@ -1145,7 +1145,7 @@
       const selected = fits.find(stock => stock.id === quote.stockId) || fits[0] || null;
       quote.stockId = selected ? selected.id : "";
       select.innerHTML = fits.length
-        ? fits.map(stock => `<option value="${escapeHtml(stock.id)}">${escapeHtml(formatStock(stock))} — ${money(stockMaterialCostPerPart(stock))} material / part</option>`).join("")
+        ? fits.map(stock => `<option value="${escapeHtml(stock.id)}">${escapeHtml(formatStock(stock))}</option>`).join("")
         : '<option value="">No matching blank</option>';
       if (selected) select.value = selected.id;
       const hasPartDimensions = ["length", "width", "thickness"]
