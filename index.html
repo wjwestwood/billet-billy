@@ -106,12 +106,15 @@
     .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .grid.stock-allowance-grid { grid-template-columns: minmax(0, .7fr) minmax(0, .7fr) minmax(0, 1.6fr); }
     .field { min-width: 0; }
+    .part-order-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .part-order-grid > .customer-field, .part-order-grid > .part-name-field { grid-column: span 2; }
     .order-details-row {
       grid-column: 1 / -1;
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 13px 12px;
     }
+    .order-details-row > .material-field { grid-column: span 2; }
     .field label, .field-label {
       display: flex;
       align-items: center;
@@ -428,12 +431,12 @@
       <div class="form-column">
         <section class="card" aria-labelledby="part-heading">
           <div class="section-heading"><span class="section-number">01</span><h2 id="part-heading">Part &amp; order</h2></div>
-          <div class="grid">
-            <div class="field">
+          <div class="grid part-order-grid">
+            <div class="field customer-field">
               <label for="customer">Customer <span class="optional">optional</span></label>
               <input id="customer" type="text" placeholder="Customer name">
             </div>
-            <div class="field">
+            <div class="field part-name-field">
               <label for="partName">Part name</label>
               <input id="partName" type="text" placeholder="e.g. Clamp block">
             </div>
@@ -446,7 +449,7 @@
                 <label for="setupHours">Setup time (hours)</label>
                 <input id="setupHours" type="number" min="0" step="any">
               </div>
-              <div class="field">
+              <div class="field material-field">
                 <label for="material">Material</label>
                 <select id="material"></select>
               </div>
@@ -573,7 +576,7 @@
             <section class="part-image-section" aria-labelledby="partImageHeading">
               <span id="partImageHeading" class="part-image-label">Part screenshot</span>
               <div id="partImagePaste" class="part-image-paste" tabindex="0" aria-label="Paste a part screenshot here">
-                <span id="partImagePrompt" class="part-image-prompt"><span class="part-image-ready">Click to paste</span><span>Allow clipboard access if prompted, or press Ctrl+V (max 1.5 MB)</span></span>
+                <span id="partImagePrompt" class="part-image-prompt"><span class="part-image-ready">Click to paste</span></span>
                 <img id="partImagePreview" class="part-image-preview" alt="Pasted screenshot of the part" hidden>
                 <button id="removePartImage" class="part-image-remove" type="button" aria-label="Remove screenshot" title="Remove screenshot" hidden><svg viewBox="0 0 12 12" aria-hidden="true"><path d="m3 3 6 6m0-6-6 6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"></path></svg></button>
               </div>
@@ -748,6 +751,7 @@
     const QUOTE_KEY = "billetBillyQuoteV1";
     const ESTIMATE_COUNTER_KEY = "billetBillyEstimateCounterV1";
     const SUPPORTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+    const MAX_SCREENSHOT_SIZE_BYTES = 3 * 1024 * 1024;
     const PITA_MAX = 5;
     const PITA_RATE_PER_LEVEL = 0.03;
     const DEFAULT_MATERIAL_REMOVAL_RATE = 2;
@@ -976,8 +980,8 @@
         status.textContent = "Paste a PNG, JPEG, WebP, or GIF screenshot.";
         return;
       }
-      if (imageFile.size > 1.5 * 1024 * 1024) {
-        status.textContent = "Screenshot must be 1.5 MB or smaller.";
+      if (imageFile.size > MAX_SCREENSHOT_SIZE_BYTES) {
+        status.textContent = "Screenshot must be 3 MB or smaller.";
         return;
       }
       try {
@@ -994,7 +998,7 @@
       const status = document.getElementById("partImageStatus");
       status.textContent = "";
       if (!navigator.clipboard || typeof navigator.clipboard.read !== "function") {
-        status.textContent = "Clipboard access is unavailable here. Press Ctrl+V to paste.";
+        status.textContent = "Clipboard access is unavailable here. Use Ctrl+V to paste.";
         return;
       }
       try {
@@ -1006,10 +1010,10 @@
           await addPastedImage(new File([blob], "screenshot", { type: imageType }));
           return;
         }
-        status.textContent = "No screenshot found in the clipboard. Copy one, then click again or press Ctrl+V.";
+        status.textContent = "No screenshot found in the clipboard. Copy one, then click again or use Ctrl+V.";
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
-        status.textContent = `Could not read the clipboard: ${reason}. Press Ctrl+V to paste instead.`;
+        status.textContent = `Could not read the clipboard: ${reason}. Use Ctrl+V to paste instead.`;
       }
     }
 
@@ -1221,8 +1225,6 @@
       quote.customToolingCost = numberOrZero(quote.customToolingCost);
       const tooling = customToolingSplit();
       quote.customToolingPercent = tooling.percent;
-      document.getElementById("customToolingCost").value = quote.customToolingCost;
-      document.getElementById("customToolingPercent").value = tooling.percent;
       document.getElementById("pitaFactor").value = pitaFactor;
       document.getElementById("pitaFactor").setAttribute("aria-valuetext", `Level ${pitaFactor} of ${PITA_MAX}; adds ${pitaPercent} percent`);
       document.getElementById("pitaFactorValue").textContent = `+${pitaPercent}%`;
@@ -1335,7 +1337,7 @@
 
     function bindQuoteField(id, key, coerce) {
       const element = document.getElementById(id);
-      const update = () => {
+      const update = event => {
         quote[key] = coerce ? coerce(element.value) : element.value;
         if (key === "thickness") {
           quote.thicknessAutoFilled = false;
@@ -1349,6 +1351,9 @@
         if (key === "quantity") quote.quantity = Math.max(1, Math.floor(numberOrZero(element.value) || 1));
         if (key === "material") quote.stockId = "";
         renderQuote();
+        if (event.type === "change" && (key === "customToolingCost" || key === "customToolingPercent")) {
+          element.value = quote[key];
+        }
       };
       element.addEventListener("input", update);
       element.addEventListener("change", update);
