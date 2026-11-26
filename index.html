@@ -106,6 +106,12 @@
     .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .grid.stock-allowance-grid { grid-template-columns: minmax(0, .7fr) minmax(0, .7fr) minmax(0, 1.6fr); }
     .field { min-width: 0; }
+    .order-details-row {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
+      gap: 13px 12px;
+    }
     .field label, .field-label {
       display: flex;
       align-items: center;
@@ -169,7 +175,7 @@
     .info-button[aria-expanded="true"] .info-tooltip { visibility: visible; opacity: 1; }
     .rush-toggle { display: flex; align-items: center; gap: 8px; min-height: 40px; color: #cbd5e1; font-size: .78rem; font-weight: 700; cursor: pointer; }
     .rush-toggle input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
-    .rush-control { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; min-height: 40px; }
+    .rush-control { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; min-height: 40px; }
     .rush-rate-field { display: flex; align-items: center; gap: 8px; width: auto; }
     .rush-rate-field[hidden] { display: none; }
     .rush-rate-field label { margin: 0; white-space: nowrap; }
@@ -431,13 +437,19 @@
               <label for="partName">Part name</label>
               <input id="partName" type="text" placeholder="e.g. Clamp block">
             </div>
-            <div class="field">
-              <label for="quantity">Quantity</label>
-              <input id="quantity" type="number" min="1" step="1" value="1" inputmode="numeric">
-            </div>
-            <div class="field">
-              <label for="material">Material</label>
-              <select id="material"></select>
+            <div class="order-details-row">
+              <div class="field">
+                <label for="quantity">Quantity</label>
+                <input id="quantity" type="number" min="1" step="1" value="1" inputmode="numeric">
+              </div>
+              <div class="field">
+                <label for="setupHours">Setup time (hours)</label>
+                <input id="setupHours" type="number" min="0" step="any">
+              </div>
+              <div class="field">
+                <label for="material">Material</label>
+                <select id="material"></select>
+              </div>
             </div>
             <div class="rush-control">
               <label class="rush-toggle" for="rushEnabled"><input id="rushEnabled" type="checkbox">Rush</label>
@@ -508,8 +520,8 @@
               <div id="externalThreadsCountWrap" class="count-field"><label for="externalThreadsCount">Qty</label><input id="externalThreadsCount" type="number" min="1" step="1" value="1" inputmode="numeric" aria-label="Quantity of external threads"></div>
             </div>
             <div class="feature-row">
-              <label class="feature-name" for="secondOpsEnabled"><input id="secondOpsEnabled" type="checkbox"><span>Second operations<small>Additional machining operations</small></span></label>
-              <div id="secondOpsCountWrap" class="count-field"><label for="secondOpsCount">Qty</label><input id="secondOpsCount" type="number" min="1" step="1" value="1" inputmode="numeric" aria-label="Quantity of second operations"></div>
+              <label class="feature-name" for="secondOpsEnabled"><input id="secondOpsEnabled" type="checkbox"><span>Second operations<small>Additional machining time per part</small></span></label>
+              <div id="secondOpsMinutesWrap" class="count-field"><label for="secondOpsMinutes">min</label><input id="secondOpsMinutes" type="number" min="0" step="any" value="20" inputmode="decimal" aria-label="Second operation time in minutes per part"></div>
             </div>
           </div>
           <div class="field" style="margin-top:13px">
@@ -572,7 +584,7 @@
             <div class="quote-line"><span id="rushLineLabel">Rush surcharge (off)</span><span id="rushCost">$0.00</span></div>
             <div id="customToolingLine" class="quote-line" hidden><span id="customToolingLineLabel">Custom tooling</span><span id="customToolingLineCost">$0.00</span></div>
             <div class="quote-line"><span id="pitaLineLabel">PITA adjustment (0%)</span><span id="pitaCost">$0.00</span></div>
-            <div class="quote-line subtle"><span>Setup</span><span id="setupTimeSummary">0 min</span></div>
+            <div class="quote-line"><span id="setupLineLabel">Setup (0.5 hr)</span><span id="setupCost">$0.00</span></div>
             <div class="quote-line"><span>Quantity</span><span id="quoteQuantity">1 pc</span></div>
             <div class="quote-divider"></div>
             <div class="total-label">Estimated total</div>
@@ -620,7 +632,6 @@
                 <div class="settings-group-title">Shop Parameters</div>
                 <div class="rate-grid">
                   <div class="field"><label for="hourlyRate"><span>Shop rate</span><span class="field-unit">$ / hour</span></label><input id="hourlyRate" type="number" min="0" step="any"></div>
-                  <div class="field"><label for="setupMinutes"><span>Setup time</span><span class="field-unit">minutes / job</span></label><input id="setupMinutes" type="number" min="0" step="1"></div>
                   <div class="field">
                     <div class="field-label-with-info">
                       <label for="firstArticlePenaltyPercent"><span>First-Article Penalty</span><span class="field-unit">%</span></label>
@@ -677,11 +688,10 @@
                     </div>
                     <input id="hexSecondsPerMm" type="number" min="0" step="any" aria-describedby="hexSecondsPerMmHelp">
                   </div>
-                  <div class="field"><label for="secondOpMinutes"><span>Second operation time</span><span class="field-unit">minutes / operation</span></label><input id="secondOpMinutes" type="number" min="0" step="any"></div>
                 </div>
                 <div class="settings-actions"><button id="resetConfig" class="button" type="button">Restore example data</button></div>
-                <p class="footer-note">Drilled-hole, thread, external-thread, and hex-socket rates are in seconds/mm and multiplied by finished part length in millimeters; second-operation time remains per operation.</p>
-                <p class="footer-note">Material is prorated by stock length used (finished part length plus length allowance) × quantity. Custom tooling is charged at the customer-paid share; PITA applies to labor only, and Rush to material and labor. Scrap/reuse, finishing, tax, and other special tooling are not included.</p>
+                <p class="footer-note">Drilled-hole, thread, external-thread, and hex-socket rates are in seconds/mm and multiplied by finished part length in millimeters; second-operation time is entered in minutes per part and charged at the shop rate.</p>
+                <p class="footer-note">Material is prorated by stock length used (finished part length plus length allowance) × quantity. Custom tooling is charged at the customer-paid share; PITA applies to labor only, and Rush to material, labor, and setup. Scrap/reuse, finishing, tax, and other special tooling are not included.</p>
               </div>
             </details>
           </div>
@@ -715,6 +725,7 @@
         <tbody>
           <tr><th scope="row">Stock material</th><td id="printMaterialCost"></td></tr>
           <tr><th scope="row" id="printLaborLabel">Machining Labour</th><td id="printLaborCost"></td></tr>
+          <tr><th scope="row" id="printSetupLabel">Setup (0.5 hr)</th><td id="printSetupCost"></td></tr>
           <tr><th scope="row" id="printRushLabel"></th><td id="printRushCost"></td></tr>
           <tr id="printCustomToolingRow" hidden><th scope="row" id="printCustomToolingLabel">Custom tooling</th><td id="printCustomToolingCost"></td></tr>
           <tr class="print-total"><th scope="row">Estimated total</th><td id="printTotal"></td></tr>
@@ -740,6 +751,7 @@
     const PITA_MAX = 5;
     const PITA_RATE_PER_LEVEL = 0.03;
     const DEFAULT_MATERIAL_REMOVAL_RATE = 2;
+    const DEFAULT_SECOND_OP_MINUTES = 20;
     const ESTIMATE_QUANTITIES = [1, 2, 5, 10, 25, 50, 100, 200];
     const DEFAULT_CONFIG = {
       stock: [
@@ -750,8 +762,8 @@
         { id: "ss-1", material: "304 Stainless", length: 6, width: 2, thickness: 1, unit: "in", price: 34 }
       ],
       rates: {
-        hourlyRate: 85, rushPercent: 20, setupMinutes: 30, holeSecondsPerMm: 3, threadSecondsPerMm: 8,
-        externalThreadSecondsPerMm: 8, hexSecondsPerMm: 6, secondOpMinutes: 20, firstArticlePenaltyPercent: 150,
+        hourlyRate: 140, rushPercent: 20, holeSecondsPerMm: 3, threadSecondsPerMm: 8,
+        externalThreadSecondsPerMm: 8, hexSecondsPerMm: 6, firstArticlePenaltyPercent: 150,
         learningDecayRate: 1.1, maxBatchSpeedupPercent: 20, batchSpeedupHalfLifeQty: 15
       },
       materialRemovalRates: {
@@ -767,9 +779,11 @@
       rushEnabled: false, holesEnabled: false, holesCount: 1, threadsEnabled: false, threadsCount: 1, pitaFactor: 0,
       customToolingEnabled: false, customToolingCost: 0, customToolingPercent: 100,
       hexEnabled: false, hexCount: 1, externalThreadsEnabled: false, externalThreadsCount: 1,
-      secondOpsEnabled: false, secondOpsCount: 1, notes: "", partImage: "", showMultipleQuantities: false
+      secondOpsEnabled: false, secondOpsMinutes: DEFAULT_SECOND_OP_MINUTES, setupHours: 1.5, notes: "", partImage: "", showMultipleQuantities: false
     };
     const clone = value => JSON.parse(JSON.stringify(value));
+    let legacySetupHours = null;
+    let legacySecondOpMinutes = DEFAULT_SECOND_OP_MINUTES;
     let config = loadConfig();
     let quote = loadQuote();
     let saveTimer;
@@ -818,6 +832,18 @@
         const saved = JSON.parse(localStorage.getItem(CONFIG_KEY));
         if (saved && Array.isArray(saved.stock) && saved.rates) {
           const rates = { ...DEFAULT_CONFIG.rates, ...saved.rates };
+          if (Object.prototype.hasOwnProperty.call(saved.rates, "secondOpMinutes")) {
+            const secondOpMinutes = Number(saved.rates.secondOpMinutes);
+            if (Number.isFinite(secondOpMinutes) && secondOpMinutes >= 0) {
+              legacySecondOpMinutes = secondOpMinutes;
+            }
+            delete rates.secondOpMinutes;
+          }
+          if (Object.prototype.hasOwnProperty.call(saved.rates, "setupMinutes")) {
+            const setupMinutes = Number(saved.rates.setupMinutes);
+            if (Number.isFinite(setupMinutes) && setupMinutes >= 0) legacySetupHours = setupMinutes / 60;
+            delete rates.setupMinutes;
+          }
           [
             ["holeSecondsPerMm", "holeMinutes"],
             ["threadSecondsPerMm", "threadMinutes"],
@@ -871,6 +897,14 @@
           const partImage = typeof saved.partImage === "string" &&
             /^data:image\/(png|jpeg|webp|gif);base64,/.test(saved.partImage) ? saved.partImage : "";
           const quote = { ...DEFAULT_QUOTE, ...saved, partImage };
+          if (!Object.prototype.hasOwnProperty.call(saved, "secondOpsMinutes")) {
+            const oldOperationCount = Math.max(1, numberOrZero(saved.secondOpsCount) || 1);
+            quote.secondOpsMinutes = legacySecondOpMinutes * oldOperationCount;
+          }
+          delete quote.secondOpsCount;
+          if (!Object.prototype.hasOwnProperty.call(saved, "setupHours") && legacySetupHours !== null) {
+            quote.setupHours = legacySetupHours;
+          }
           if (saved.unit === "in" && !saved.unitExplicit) {
             ["length", "width", "thickness"].forEach(key => {
               if (quote[key] === "" || quote[key] == null) return;
@@ -885,7 +919,10 @@
       } catch (error) {
         console.warn("Could not load the saved draft quote.", error);
       }
-      return clone(DEFAULT_QUOTE);
+      const quote = clone(DEFAULT_QUOTE);
+      quote.secondOpsMinutes = legacySecondOpMinutes;
+      if (legacySetupHours !== null) quote.setupHours = legacySetupHours;
+      return quote;
     }
 
     function persistConfig() {
@@ -1020,14 +1057,16 @@
     function estimateQuoteTotals(quantity, stock) {
       const materialCost = stockMaterialCostPerPart(stock) * quantity;
       const laborCost = estimateLabor(quantity).cost;
+      const setupCost = numberOrZero(quote.setupHours) * numberOrZero(config.rates.hourlyRate);
       const pitaFactor = Math.min(PITA_MAX, Math.round(numberOrZero(quote.pitaFactor)));
       const pitaCost = laborCost * pitaFactor * PITA_RATE_PER_LEVEL;
-      const subtotal = materialCost + laborCost;
+      const subtotal = materialCost + laborCost + setupCost;
       const rushCost = quote.rushEnabled ? subtotal * numberOrZero(config.rates.rushPercent) / 100 : 0;
       const toolingCost = customToolingSplit().customer;
       return {
         materialCost,
         laborCost,
+        setupCost,
         pitaCost,
         rushCost,
         total: subtotal + pitaCost + rushCost + toolingCost
@@ -1055,8 +1094,7 @@
         (quote.holesEnabled ? lengthScaledMinutes(config.rates.holeSecondsPerMm, quote.holesCount) : 0) +
         (quote.threadsEnabled ? lengthScaledMinutes(config.rates.threadSecondsPerMm, quote.threadsCount) : 0) +
         (quote.hexEnabled ? lengthScaledMinutes(config.rates.hexSecondsPerMm, quote.hexCount) : 0) +
-        (quote.externalThreadsEnabled ? lengthScaledMinutes(config.rates.externalThreadSecondsPerMm, quote.externalThreadsCount) : 0) +
-        (quote.secondOpsEnabled ? numberOrZero(quote.secondOpsCount) * numberOrZero(config.rates.secondOpMinutes) : 0);
+        (quote.externalThreadsEnabled ? lengthScaledMinutes(config.rates.externalThreadSecondsPerMm, quote.externalThreadsCount) : 0);
       const baseCycleMinutes = sizeCycleMinutes + featureMinutes;
       const firstArticlePenaltyPercent = numberOrZero(config.rates.firstArticlePenaltyPercent);
       const learningDecayRate = numberOrZero(config.rates.learningDecayRate);
@@ -1069,8 +1107,11 @@
           (1 - (maxBatchSpeedupPercent / 100) *
             (1 - Math.exp(-0.693 * (i - 1) / batchSpeedupHalfLifeQty)));
       }
-      const cycle = quantity > 0 ? totalCycleMinutes / quantity : 0;
-      const totalMinutes = numberOrZero(config.rates.setupMinutes) + totalCycleMinutes;
+      const secondOpsMinutes = quote.secondOpsEnabled
+        ? numberOrZero(quote.secondOpsMinutes) * quantity
+        : 0;
+      const totalMinutes = totalCycleMinutes + secondOpsMinutes;
+      const cycle = quantity > 0 ? totalMinutes / quantity : 0;
       const cost = totalMinutes * numberOrZero(config.rates.hourlyRate) / 60;
       return { cycle, totalMinutes, cost };
     }
@@ -1166,8 +1207,12 @@
       const quantity = Math.max(1, Math.floor(numberOrZero(quote.quantity) || 1));
       const totals = quoteReady
         ? estimateQuoteTotals(quantity, stock)
-        : { materialCost: 0, laborCost: 0, pitaCost: 0, rushCost: 0, total: customToolingSplit().customer };
-      const { materialCost, laborCost, pitaCost, rushCost, total } = totals;
+        : {
+          materialCost: 0, laborCost: 0,
+          setupCost: numberOrZero(quote.setupHours) * numberOrZero(config.rates.hourlyRate),
+          pitaCost: 0, rushCost: 0, total: customToolingSplit().customer
+        };
+      const { materialCost, laborCost, setupCost, pitaCost, rushCost, total } = totals;
       const pitaFactor = Math.min(PITA_MAX, Math.round(numberOrZero(quote.pitaFactor)));
       quote.pitaFactor = pitaFactor;
       const pitaRate = pitaFactor * PITA_RATE_PER_LEVEL;
@@ -1191,7 +1236,8 @@
       document.getElementById("customToolingLineLabel").textContent =
         `Custom tooling (${tooling.percent}%)`;
       document.getElementById("customToolingLineCost").textContent = money(tooling.customer);
-      document.getElementById("setupTimeSummary").textContent = `${numberOrZero(config.rates.setupMinutes)} min`;
+      document.getElementById("setupLineLabel").textContent = `Setup (${numberOrZero(quote.setupHours)} hr)`;
+      document.getElementById("setupCost").textContent = money(setupCost);
       document.getElementById("quoteQuantity").textContent = `${quantity} ${quantity === 1 ? "pc" : "pcs"}`;
       document.getElementById("totalCost").textContent = quoteReady ? money(total) : "—";
       document.getElementById("unitPrice").textContent = quoteReady
@@ -1202,7 +1248,7 @@
       if (quote.threadsEnabled) selectedFeatures.push(`${numberOrZero(quote.threadsCount)} threaded`);
       if (quote.hexEnabled) selectedFeatures.push(`${numberOrZero(quote.hexCount)} hex`);
       if (quote.externalThreadsEnabled) selectedFeatures.push(`${numberOrZero(quote.externalThreadsCount)} external threads`);
-      if (quote.secondOpsEnabled) selectedFeatures.push(`${numberOrZero(quote.secondOpsCount)} second operations`);
+      if (quote.secondOpsEnabled) selectedFeatures.push(`${numberOrZero(quote.secondOpsMinutes)} min second operations`);
       document.getElementById("featureSummary").textContent = selectedFeatures.join(", ") || "No features selected";
       persistQuote();
     }
@@ -1213,7 +1259,7 @@
 
     function applyQuoteToForm() {
       ["customer", "partName", "quantity", "length", "width", "thickness", "notes",
-        "holesCount", "threadsCount", "hexCount", "externalThreadsCount", "secondOpsCount", "pitaFactor",
+        "holesCount", "threadsCount", "hexCount", "externalThreadsCount", "secondOpsMinutes", "setupHours", "pitaFactor",
         "customToolingCost", "customToolingPercent",
         "lengthAllowancePercent", "cleanupAllowanceMm"].forEach(key => setInputValue(key, quote[key]));
       ["rushEnabled", "holesEnabled", "threadsEnabled", "hexEnabled", "externalThreadsEnabled", "secondOpsEnabled",
@@ -1232,7 +1278,7 @@
 
     function renderFeatureRows() {
       [["holesEnabled", "holesCountWrap"], ["threadsEnabled", "threadsCountWrap"], ["hexEnabled", "hexCountWrap"],
-        ["externalThreadsEnabled", "externalThreadsCountWrap"], ["secondOpsEnabled", "secondOpsCountWrap"]]
+        ["externalThreadsEnabled", "externalThreadsCountWrap"], ["secondOpsEnabled", "secondOpsMinutesWrap"]]
         .forEach(([enabled, wrapper]) => document.getElementById(wrapper).classList.toggle("visible", quote[enabled]));
     }
 
@@ -1310,8 +1356,10 @@
 
     ["customer", "partName", "quantity", "length", "width", "thickness", "notes",
       "lengthAllowancePercent", "cleanupAllowanceMm",
-      "holesCount", "threadsCount", "hexCount", "externalThreadsCount", "secondOpsCount"].forEach(id => bindQuoteField(id, id));
+      "holesCount", "threadsCount", "hexCount", "externalThreadsCount"].forEach(id => bindQuoteField(id, id));
+    bindQuoteField("secondOpsMinutes", "secondOpsMinutes", Number);
     bindQuoteField("pitaFactor", "pitaFactor", Number);
+    bindQuoteField("setupHours", "setupHours", Number);
     bindQuoteField("customToolingCost", "customToolingCost", Number);
     bindQuoteField("customToolingPercent", "customToolingPercent", Number);
     bindQuoteField("material", "material");
@@ -1530,7 +1578,7 @@
       if (quote.threadsEnabled) features.push(`${numberOrZero(quote.threadsCount)} threaded holes`);
       if (quote.hexEnabled) features.push(`${numberOrZero(quote.hexCount)} hex sockets`);
       if (quote.externalThreadsEnabled) features.push(`${numberOrZero(quote.externalThreadsCount)} external threads`);
-      if (quote.secondOpsEnabled) features.push(`${numberOrZero(quote.secondOpsCount)} second operations`);
+      if (quote.secondOpsEnabled) features.push(`${numberOrZero(quote.secondOpsMinutes)} min second operations`);
       const printValues = {
         printDate: new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" })
           .format(new Date()).replace(/ /g, "-"),
@@ -1547,6 +1595,8 @@
         printMaterialCost: document.getElementById("materialCost").textContent,
         printLaborLabel: "Machining Labour",
         printLaborCost: money(laborCost + laborPita),
+        printSetupLabel: `Setup (${numberOrZero(quote.setupHours)} hr)`,
+        printSetupCost: money(numberOrZero(quote.setupHours) * numberOrZero(config.rates.hourlyRate)),
         printRushCost: document.getElementById("rushCost").textContent,
         printCustomToolingLabel: `Custom tooling (${tooling.percent}%)`,
         printCustomToolingCost: money(tooling.customer),
