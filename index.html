@@ -213,7 +213,7 @@
       font-weight: 700;
     }
     .unit-button[aria-pressed="true"] { border-color: var(--accent); background: rgba(245, 158, 11, .12); color: var(--accent); }
-    .dimensions-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 10px; align-items: end; }
+    .dimensions-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) auto; gap: 10px; align-items: end; }
     .dimension-unit { padding-bottom: 0; }
     .hint { margin: 9px 0 0; color: var(--muted); font-size: .72rem; }
     .stock-result {
@@ -332,9 +332,9 @@
     .settings-group-heading .settings-group-title { margin: 0; }
     .stock-table-wrap { overflow-x: auto; }
     .stock-table { width: 100%; min-width: 640px; table-layout: fixed; border-collapse: separate; border-spacing: 0 5px; }
-    .stock-table .stock-material-column { width: 33%; }
-    .stock-table .stock-length-column { width: 11%; }
-    .stock-table .stock-dimension-column { width: 9%; }
+    .stock-table .stock-material-column { width: 38%; }
+    .stock-table .stock-length-column { width: 12%; }
+    .stock-table .stock-dimension-column { width: 12%; }
     .stock-table .stock-unit-column { width: 10%; }
     .stock-table .stock-price-column { width: 12%; }
     .stock-table .stock-availability-column { width: 10%; }
@@ -398,8 +398,8 @@
       .print-part-image { display: block; width: 100%; max-width: 100%; max-height: 60mm; margin: 0; object-fit: contain; }
       .print-part-image[hidden] { display: none; }
       .print-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; align-content: start; margin: 0; }
-      .print-meta span, .print-label { display: block; margin-bottom: 2px; color: #444; font-size: 7.5pt; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
-      .print-meta strong { font-size: 10.5pt; }
+      .print-meta span, .print-label { display: block; margin-bottom: 2px; color: #444; font-size: 7.5pt; font-weight: 700; letter-spacing: .04em; }
+      .print-meta strong { font-size: 10.5pt; text-transform: uppercase; }
       .print-document h2 { margin: 18px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #777; font-size: 10.5pt; }
       .print-table { width: 100%; border-collapse: collapse; }
       .print-table th, .print-table td { padding: 5px 4px; border-bottom: 1px solid #ccc; text-align: left; vertical-align: top; }
@@ -472,19 +472,15 @@
               <input id="length" type="number" min="0" step="any" placeholder="0.00" inputmode="decimal">
             </div>
             <div class="field">
-              <label for="width">Width</label>
-              <input id="width" type="number" min="0" step="any" placeholder="0.00" inputmode="decimal">
-            </div>
-            <div class="field">
-              <label for="thickness">Thickness</label>
-              <input id="thickness" type="number" min="0" step="any" placeholder="0.00" inputmode="decimal">
+              <label for="diameter">Diameter</label>
+              <input id="diameter" type="number" min="0" step="any" placeholder="0.00" inputmode="decimal">
             </div>
             <div class="dimension-unit" role="group" aria-label="Dimension units">
               <button class="unit-button" type="button" data-unit="mm" aria-pressed="true">MM</button>
               <button class="unit-button" type="button" data-unit="in" aria-pressed="false">IN</button>
             </div>
           </div>
-          <p class="hint">For round parts, thickness follows width until edited manually. Extra length is a percentage of the finished length. Cleanup adds material on each side of the width and thickness.</p>
+          <p class="hint">Extra length is a percentage of the finished length. Cleanup adds material to the diameter before machining.</p>
           <div class="grid three stock-allowance-grid" style="margin-top:13px">
             <div class="field">
               <label for="lengthAllowancePercent">Length allowance <span class="optional">(%)</span></label>
@@ -611,13 +607,12 @@
                       <col class="stock-material-column">
                       <col class="stock-length-column">
                       <col class="stock-dimension-column">
-                      <col class="stock-dimension-column">
                       <col class="stock-unit-column">
                       <col class="stock-price-column">
                       <col class="stock-availability-column">
                       <col class="stock-action-column">
                     </colgroup>
-                    <thead><tr><th>Material / stock</th><th>Length</th><th>Width</th><th>Thick.</th><th>Unit</th><th>Price</th><th>In stock</th><th></th></tr></thead>
+                    <thead><tr><th>Material / stock</th><th>Length</th><th>Ø</th><th>Unit</th><th>Price</th><th>In stock</th><th></th></tr></thead>
                     <tbody id="stockRows"></tbody>
                   </table>
                 </div>
@@ -629,7 +624,7 @@
                 </div>
                 <div class="settings-group-heading">
                   <div class="settings-group-title">Material removal rates</div>
-                  <button class="info-button" type="button" aria-label="Material removal rates help" aria-describedby="materialRemovalRatesHelp" aria-expanded="false">i<span id="materialRemovalRatesHelp" class="info-tooltip" role="tooltip">One provisional rate per exact material name. Cycle time uses rectangular stock volume removed ÷ this rate, plus selected feature times. Calibrate each example rate with completed shop jobs.</span></button>
+                  <button class="info-button" type="button" aria-label="Material removal rates help" aria-describedby="materialRemovalRatesHelp" aria-expanded="false">i<span id="materialRemovalRatesHelp" class="info-tooltip" role="tooltip">One provisional rate per exact material name.                   Cycle time uses cylindrical stock volume removed ÷ this rate, plus selected feature times. Calibrate each example rate with completed shop jobs.</span></button>
                 </div>
                 <div id="materialRemovalRates" class="rate-grid"></div>
                 <div class="settings-group-title">Shop Parameters</div>
@@ -727,7 +722,7 @@
       <table class="print-table print-costs">
         <tbody>
           <tr><th scope="row">Stock material</th><td id="printMaterialCost"></td></tr>
-          <tr><th scope="row" id="printLaborLabel">Machining Labour</th><td id="printLaborCost"></td></tr>
+          <tr><th scope="row" id="printLaborLabel">Machining labour</th><td id="printLaborCost"></td></tr>
           <tr><th scope="row" id="printSetupLabel">Setup (0.5 hr)</th><td id="printSetupCost"></td></tr>
           <tr><th scope="row" id="printRushLabel"></th><td id="printRushCost"></td></tr>
           <tr id="printCustomToolingRow" hidden><th scope="row" id="printCustomToolingLabel">Custom tooling</th><td id="printCustomToolingCost"></td></tr>
@@ -759,11 +754,11 @@
     const ESTIMATE_QUANTITIES = [1, 2, 5, 10, 25, 50, 100, 200];
     const DEFAULT_CONFIG = {
       stock: [
-        { id: "al-1", material: "6061 Aluminum", length: 6, width: 2, thickness: 1, unit: "in", price: 18 },
-        { id: "al-2", material: "6061 Aluminum", length: 12, width: 2, thickness: 1, unit: "in", price: 31 },
-        { id: "steel-1", material: "1018 Steel", length: 6, width: 2, thickness: 1, unit: "in", price: 22 },
-        { id: "steel-2", material: "1018 Steel", length: 12, width: 2, thickness: 1, unit: "in", price: 39 },
-        { id: "ss-1", material: "304 Stainless", length: 6, width: 2, thickness: 1, unit: "in", price: 34 }
+        { id: "al-1", material: "6061 Aluminum", length: 6, diameter: 1, unit: "in", price: 18 },
+        { id: "al-2", material: "6061 Aluminum", length: 12, diameter: 1, unit: "in", price: 31 },
+        { id: "steel-1", material: "1018 Steel", length: 6, diameter: 1, unit: "in", price: 22 },
+        { id: "steel-2", material: "1018 Steel", length: 12, diameter: 1, unit: "in", price: 39 },
+        { id: "ss-1", material: "304 Stainless", length: 6, diameter: 1, unit: "in", price: 34 }
       ],
       rates: {
         hourlyRate: 140, rushPercent: 20, holeSecondsPerMm: 3, threadSecondsPerMm: 8,
@@ -778,7 +773,7 @@
     };
     const DEFAULT_QUOTE = {
       estimateNumber: "", customer: "", partName: "", quantity: 1, material: "6061 Aluminum",
-      length: "", width: "", thickness: "", thicknessAutoFilled: null, unit: "mm", unitExplicit: false, lengthAllowancePercent: 10,
+      length: "", diameter: "", unit: "mm", unitExplicit: false, lengthAllowancePercent: 10,
       cleanupAllowanceMm: 1, stockId: "",
       rushEnabled: false, holesEnabled: false, holesCount: 1, threadsEnabled: false, threadsCount: 1, pitaFactor: 0,
       customToolingEnabled: false, customToolingCost: 0, customToolingPercent: 100,
@@ -829,6 +824,14 @@
       }
       document.getElementById("quoteEstimateNumber").textContent = quote.estimateNumber;
       return quote.estimateNumber;
+    }
+
+    function legacyStockDiameter(stock) {
+      const crossSection = [stock.width, stock.thickness]
+        .map(Number)
+        .filter(value => Number.isFinite(value) && value > 0);
+      // The inscribed round bar is limited by the shorter rectangular side.
+      return crossSection.length ? Math.min(...crossSection) : 0;
     }
 
     function loadConfig() {
@@ -883,7 +886,15 @@
           });
           delete rates.materialRemovalRate;
           return {
-            stock: saved.stock.filter(item => item && typeof item.material === "string").map(item => ({ ...item })),
+            stock: saved.stock.filter(item => item && typeof item.material === "string").map(item => {
+              const stock = { ...item };
+              if (!Object.prototype.hasOwnProperty.call(stock, "diameter")) {
+                stock.diameter = legacyStockDiameter(stock);
+              }
+              delete stock.width;
+              delete stock.thickness;
+              return stock;
+            }),
             rates,
             materialRemovalRates
           };
@@ -901,6 +912,15 @@
           const partImage = typeof saved.partImage === "string" &&
             /^data:image\/(png|jpeg|webp|gif);base64,/.test(saved.partImage) ? saved.partImage : "";
           const quote = { ...DEFAULT_QUOTE, ...saved, partImage };
+          if (!Object.prototype.hasOwnProperty.call(saved, "diameter")) {
+            const legacyWidth = Number(saved.width);
+            quote.diameter = Number.isFinite(legacyWidth) && legacyWidth > 0
+              ? saved.width
+              : saved.thickness || "";
+          }
+          delete quote.width;
+          delete quote.thickness;
+          delete quote.thicknessAutoFilled;
           if (!Object.prototype.hasOwnProperty.call(saved, "secondOpsMinutes")) {
             const oldOperationCount = Math.max(1, numberOrZero(saved.secondOpsCount) || 1);
             quote.secondOpsMinutes = legacySecondOpMinutes * oldOperationCount;
@@ -910,7 +930,7 @@
             quote.setupHours = legacySetupHours;
           }
           if (saved.unit === "in" && !saved.unitExplicit) {
-            ["length", "width", "thickness"].forEach(key => {
+            ["length", "diameter"].forEach(key => {
               if (quote[key] === "" || quote[key] == null) return;
               const value = Number(quote[key]);
               if (Number.isFinite(value)) quote[key] = Number(convert(value, "in", "mm").toFixed(4));
@@ -1038,7 +1058,7 @@
     }
 
     function stockSize(stock, unit) {
-      return [stock.length, stock.width, stock.thickness].map(value => convert(numberOrZero(value), stock.unit || "in", unit));
+      return [stock.length, stock.diameter].map(value => convert(numberOrZero(value), stock.unit || "in", unit));
     }
 
     function requiredStockLength() {
@@ -1084,12 +1104,12 @@
       const stock = config.stock.find(item => item.id === quote.stockId);
       let sizeCycleMinutes = 0;
       if (stock) {
-        const [, stockWidthMm, stockThicknessMm] = stockSize(stock, "mm");
-        const blankVolumeCm3 = convert(requiredStockLength(), quote.unit, "mm") *
-          stockWidthMm * stockThicknessMm / 1000;
-        const finishedVolumeCm3 = convert(numberOrZero(quote.length), quote.unit, "mm") *
-          convert(numberOrZero(quote.width), quote.unit, "mm") *
-          convert(numberOrZero(quote.thickness), quote.unit, "mm") / 1000;
+        const [, stockDiameterMm] = stockSize(stock, "mm");
+        const blankVolumeCm3 = Math.PI * (stockDiameterMm / 2) ** 2 *
+          convert(requiredStockLength(), quote.unit, "mm") / 1000;
+        const finishedDiameterMm = convert(numberOrZero(quote.diameter), quote.unit, "mm");
+        const finishedVolumeCm3 = Math.PI * (finishedDiameterMm / 2) ** 2 *
+          convert(numberOrZero(quote.length), quote.unit, "mm") / 1000;
         const removedVolumeCm3 = Math.max(0, blankVolumeCm3 - finishedVolumeCm3);
         const materialRemovalRate = numberOrZero(config.materialRemovalRates[quote.material]);
         if (materialRemovalRate > 0) sizeCycleMinutes = removedVolumeCm3 / materialRemovalRate;
@@ -1124,37 +1144,37 @@
       const material = document.getElementById("material").value;
       const dims = [
         numberOrZero(document.getElementById("length").value),
-        numberOrZero(document.getElementById("width").value),
-        numberOrZero(document.getElementById("thickness").value)
+        numberOrZero(document.getElementById("diameter").value)
       ];
       if (!dims.every(value => value > 0)) return [];
       const lengthAllowance = dims[0] * numberOrZero(quote.lengthAllowancePercent) / 100;
       const cleanupPerSide = convert(numberOrZero(quote.cleanupAllowanceMm), "mm", quote.unit);
       const required = [
         dims[0] + lengthAllowance,
-        dims[1] + cleanupPerSide * 2,
-        dims[2] + cleanupPerSide * 2
+        dims[1] + cleanupPerSide * 2
       ];
       return config.stock
         .filter(stock => stock.material === material && numberOrZero(stock.price) >= 0)
         .map(stock => {
-          const [stockLength, ...crossSection] = stockSize(stock, quote.unit);
-          const [requiredLength, ...requiredCrossSection] = required;
-          crossSection.sort((a, b) => a - b);
-          requiredCrossSection.sort((a, b) => a - b);
+          const [stockLength, stockDiameter] = stockSize(stock, quote.unit);
+          const [requiredLength, requiredDiameter] = required;
           const fits = stockLength + 1e-8 >= requiredLength &&
-            requiredCrossSection.every((size, index) => crossSection[index] + 1e-8 >= size);
+            stockDiameter + 1e-8 >= requiredDiameter;
           return { stock, fits };
         })
         .filter(item => item.fits)
         .map(item => item.stock)
-        .sort((a, b) => stockMaterialCostPerPart(a) - stockMaterialCostPerPart(b) || a.length * a.width * a.thickness - b.length * b.width * b.thickness);
+        .sort((a, b) => {
+          const [aLength, aDiameter] = stockSize(a, quote.unit);
+          const [bLength, bDiameter] = stockSize(b, quote.unit);
+          return stockMaterialCostPerPart(a) - stockMaterialCostPerPart(b) ||
+            aLength * aDiameter ** 2 - bLength * bDiameter ** 2;
+        });
     }
 
     function formatStock(stock) {
       if (!stock) return "";
-      const dimensions = [stock.length, stock.width, stock.thickness].join(" × ");
-      return `${stock.material} · ${dimensions} ${stock.unit || "in"}`;
+      return `${stock.material} · ${stock.length} × Ø${stock.diameter} ${stock.unit || "in"}`;
     }
 
     function renderMaterials() {
@@ -1193,7 +1213,7 @@
         ? fits.map(stock => `<option value="${escapeHtml(stock.id)}">${escapeHtml(formatStock(stock))}</option>`).join("")
         : '<option value="">No matching blank</option>';
       if (selected) select.value = selected.id;
-      const hasPartDimensions = ["length", "width", "thickness"]
+      const hasPartDimensions = ["length", "diameter"]
         .every(id => numberOrZero(document.getElementById(id).value) > 0);
       const result = document.getElementById("stockResult");
       result.classList.toggle("no-fit", !selected && hasPartDimensions);
@@ -1205,7 +1225,7 @@
 
     function renderQuote() {
       const stock = renderStockOptions();
-      const hasPartDimensions = ["length", "width", "thickness"]
+      const hasPartDimensions = ["length", "diameter"]
         .every(id => numberOrZero(document.getElementById(id).value) > 0);
       const quoteReady = Boolean(stock && hasPartDimensions);
       const quantity = Math.max(1, Math.floor(numberOrZero(quote.quantity) || 1));
@@ -1260,7 +1280,7 @@
     }
 
     function applyQuoteToForm() {
-      ["customer", "partName", "quantity", "length", "width", "thickness", "notes",
+      ["customer", "partName", "quantity", "length", "diameter", "notes",
         "holesCount", "threadsCount", "hexCount", "externalThreadsCount", "secondOpsMinutes", "setupHours", "pitaFactor",
         "customToolingCost", "customToolingPercent",
         "lengthAllowancePercent", "cleanupAllowanceMm"].forEach(key => setInputValue(key, quote[key]));
@@ -1321,8 +1341,7 @@
         <tr data-stock-index="${index}">
           <td><input data-key="material" aria-label="Stock material" value="${escapeHtml(stock.material)}"></td>
           <td><input data-key="length" aria-label="Stock length" type="number" min="0" step="any" value="${escapeHtml(stock.length)}"></td>
-          <td><input data-key="width" aria-label="Stock width" type="number" min="0" step="any" value="${escapeHtml(stock.width)}"></td>
-          <td><input data-key="thickness" aria-label="Stock thickness" type="number" min="0" step="any" value="${escapeHtml(stock.thickness)}"></td>
+          <td><input data-key="diameter" aria-label="Stock diameter" type="number" min="0" step="any" value="${escapeHtml(stock.diameter)}"></td>
           <td><select data-key="unit" aria-label="Stock unit"><option value="in" ${stock.unit === "in" ? "selected" : ""}>in</option><option value="mm" ${stock.unit === "mm" ? "selected" : ""}>mm</option></select></td>
           <td><input data-key="price" aria-label="Price per stock blank" type="number" min="0" step="any" value="${escapeHtml(stock.price)}"></td>
           <td><input data-key="inStock" aria-label="${escapeHtml(stock.material)} ${escapeHtml(stock.length)} ${escapeHtml(stock.unit || "in")} in stock" type="checkbox" ${stock.inStock ? "checked" : ""}></td>
@@ -1339,15 +1358,6 @@
       const element = document.getElementById(id);
       const update = event => {
         quote[key] = coerce ? coerce(element.value) : element.value;
-        if (key === "thickness") {
-          quote.thicknessAutoFilled = false;
-        } else if (key === "width" &&
-            (quote.thicknessAutoFilled ||
-             (quote.thicknessAutoFilled == null && (quote.thickness === "" || quote.thickness == null)))) {
-          quote.thickness = element.value;
-          quote.thicknessAutoFilled = true;
-          document.getElementById("thickness").value = element.value;
-        }
         if (key === "quantity") quote.quantity = Math.max(1, Math.floor(numberOrZero(element.value) || 1));
         if (key === "material") quote.stockId = "";
         renderQuote();
@@ -1359,7 +1369,7 @@
       element.addEventListener("change", update);
     }
 
-    ["customer", "partName", "quantity", "length", "width", "thickness", "notes",
+    ["customer", "partName", "quantity", "length", "diameter", "notes",
       "lengthAllowancePercent", "cleanupAllowanceMm",
       "holesCount", "threadsCount", "hexCount", "externalThreadsCount"].forEach(id => bindQuoteField(id, id));
     bindQuoteField("secondOpsMinutes", "secondOpsMinutes", Number);
@@ -1420,7 +1430,7 @@
       button.addEventListener("click", () => {
         const nextUnit = button.dataset.unit;
         if (nextUnit !== quote.unit) {
-          ["length", "width", "thickness"].forEach(key => {
+          ["length", "diameter"].forEach(key => {
             if (quote[key] === "" || quote[key] == null) return;
             const converted = convert(numberOrZero(quote[key]), quote.unit, nextUnit);
             quote[key] = Number(converted.toFixed(4));
@@ -1480,8 +1490,8 @@
     });
     document.getElementById("addStock").addEventListener("click", () => {
       config.stock.push({
-        id: `stock-${Date.now()}`, material: "New material", length: 6, width: 2,
-        thickness: 1, unit: "in", price: 0, inStock: false
+        id: `stock-${Date.now()}`, material: "New material", length: 6, diameter: 1,
+        unit: "in", price: 0, inStock: false
       });
       persistConfig();
       renderSettings();
@@ -1521,7 +1531,7 @@
     }
 
     document.getElementById("exportCatalog").addEventListener("click", () => {
-      const header = ["material", "length", "width", "thickness", "unit", "price", "inStock"];
+      const header = ["material", "length", "diameter", "unit", "price", "inStock"];
       const lines = [header.join(","), ...config.stock.map(stock => header.map(key => csvCell(stock[key])).join(","))];
       const blob = new Blob([lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob);
@@ -1538,19 +1548,26 @@
       try {
         const rows = parseCsv(await file.text());
         const headers = rows.shift().map(header => header.trim().toLowerCase());
-        const required = ["material", "length", "width", "thickness", "unit", "price"];
-        if (!required.every(header => headers.includes(header))) throw new Error("CSV needs columns: material, length, width, thickness, unit, price.");
+        const required = ["material", "length", "unit", "price"];
+        const hasLegacyDimensions = headers.includes("width") && headers.includes("thickness");
+        if (!required.every(header => headers.includes(header)) ||
+            (!headers.includes("diameter") && !hasLegacyDimensions)) {
+          throw new Error("CSV needs material, length, unit, and price columns, plus diameter (or legacy width and thickness) columns.");
+        }
         const imported = rows.filter(row => row.some(value => value.trim())).map(row => {
           const data = Object.fromEntries(headers.map((header, index) => [header, row[index] || ""]));
+          const diameter = headers.includes("diameter")
+            ? Number(data.diameter)
+            : Math.min(Number(data.width), Number(data.thickness));
           const stock = {
             id: `stock-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
             material: data.material.trim(),
-            length: Number(data.length), width: Number(data.width), thickness: Number(data.thickness),
+            length: Number(data.length), diameter,
             unit: data.unit.trim().toLowerCase(), price: Number(data.price),
             inStock: String(data.instock || "").trim().toLowerCase() === "true"
           };
-          if (!stock.material || ![stock.length, stock.width, stock.thickness, stock.price].every(Number.isFinite) ||
-              [stock.length, stock.width, stock.thickness, stock.price].some(value => value < 0) ||
+          if (!stock.material || ![stock.length, stock.diameter, stock.price].every(Number.isFinite) ||
+              [stock.length, stock.diameter, stock.price].some(value => value < 0) ||
               !["in", "mm"].includes(stock.unit)) {
             throw new Error("Each row needs a material, non-negative dimensions and price, and unit 'in' or 'mm'.");
           }
@@ -1572,7 +1589,7 @@
       const stock = config.stock.find(item => item.id === quote.stockId);
       const quantity = Math.max(1, Math.floor(numberOrZero(quote.quantity) || 1));
       const pitaFactor = Math.min(PITA_MAX, Math.max(0, numberOrZero(quote.pitaFactor)));
-      const quoteReady = Boolean(stock && ["length", "width", "thickness"]
+      const quoteReady = Boolean(stock && ["length", "diameter"]
         .every(id => numberOrZero(document.getElementById(id).value) > 0));
       const laborEstimate = estimateLabor(quantity);
       const laborCost = quoteReady ? laborEstimate.cost : 0;
@@ -1591,14 +1608,14 @@
         printCustomer: quote.customer || "—",
         printPartName: quote.partName || "Unnamed part",
         printQuantity: `${quantity} ${quantity === 1 ? "pc" : "pcs"}`,
-        printDimensions: `${quote.length || "?"} × ${quote.width || "?"} × ${quote.thickness || "?"} ${quote.unit}`,
+        printDimensions: `${quote.length || "?"} x ${quote.diameter || "?"}Ø ${quote.unit}`,
         printMaterial: quote.material || "Not selected",
         printRush: quote.rushEnabled ? "Yes" : "No",
         printRushLabel: "Rush surcharge",
         printFeatures: features.join(", ") || "None specified",
         printNotes: quote.notes || "None",
         printMaterialCost: document.getElementById("materialCost").textContent,
-        printLaborLabel: "Machining Labour",
+        printLaborLabel: "Machining labour",
         printLaborCost: money(laborCost + laborPita),
         printSetupLabel: `Setup (${numberOrZero(quote.setupHours)} hr)`,
         printSetupCost: money(numberOrZero(quote.setupHours) * numberOrZero(config.rates.hourlyRate)),
